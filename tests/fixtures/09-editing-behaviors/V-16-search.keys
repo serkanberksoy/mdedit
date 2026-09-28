@@ -1,0 +1,2 @@
+// search "beta": first match after the cursor, next with F3, previous with Shift+F3
+<C-f>beta<Enter><F3><F3><S-F3>

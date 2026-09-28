@@ -1,0 +1,12 @@
+--- source after keys ---
+# Notes
+alpha beta
+Gamma delta
+beta again
+last beta
+--- rendered (cursor on line 4) ---
+«█ NOTES»{magenta bold underlined}
+alpha beta
+Gamma delta
+beta again
+last beta

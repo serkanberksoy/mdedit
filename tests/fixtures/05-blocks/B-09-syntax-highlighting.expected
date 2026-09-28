@@ -1,0 +1,6 @@
+--- rendered ---
+«╭─ rust»{darkgray}
+«│ »{darkgray}«fn»{rgb(180,142,173)}« »{rgb(192,197,206)}«main»{rgb(143,161,179)}«() {»{rgb(192,197,206)}
+«│ »{darkgray}«    println!("»{rgb(192,197,206)}«hi»{rgb(163,190,140)}«");»{rgb(192,197,206)}
+«│ »{darkgray}«}»{rgb(192,197,206)}
+«╰─»{darkgray}

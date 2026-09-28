@@ -1,0 +1,12 @@
+--- rendered ---
+«☐ »{cyan}open
+«☑ »{green}«done»{darkgray crossed_out}
+«☒ »{darkgray}«cancelled»{darkgray crossed_out}
+«⦿ »{gray}log entry
+«◐ »{yellow}in progress
+«➜ »{magenta}forwarded
+«⏲ »{magenta}scheduled
+«⚑ »{red}«important»{bold}
+«? »{yellow}question
+«★ »{yellow}star
+«[~] »{cyan}unknown state

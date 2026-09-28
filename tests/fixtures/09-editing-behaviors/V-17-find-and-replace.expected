@@ -1,0 +1,6 @@
+--- source after keys ---
+one dog, two dog
+red dog
+--- rendered (cursor on line 1) ---
+one dog, two dog
+red dog

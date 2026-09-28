@@ -1,0 +1,2 @@
+// go to the end of the line, open the picker, search, insert with Enter
+<End> <C-e>grinning<Enter>

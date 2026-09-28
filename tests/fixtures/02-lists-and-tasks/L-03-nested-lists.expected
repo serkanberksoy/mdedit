@@ -1,0 +1,7 @@
+--- rendered ---
+«• »{cyan}level 0
+«│ »{darkgray}«◦ »{cyan}level 1 (spaces)
+«│ │ »{darkgray}«▪ »{cyan}level 2 (spaces)
+«│ »{darkgray}«◦ »{cyan}level 1 (tab)
+«│ │ »{darkgray}«▪ »{cyan}level 2 (tabs)
+«• »{cyan}back to level 0

@@ -1,0 +1,4 @@
+--- rendered ---
+A paragraph with a block id «^abc123»{darkgray}
+«• »{cyan}list item «^item-1»{darkgray}
+Not an id: 2^10 and ^ alone and x ^a b

@@ -1,0 +1,8 @@
+--- rendered ---
+«• »{cyan}item one
+  continuation line of item one
+
+  second paragraph of item one
+«• »{cyan}item two
+«│ »{darkgray}«◦ »{cyan}nested
+«│ »{darkgray}  more text for nested

@@ -1,0 +1,7 @@
+--- rendered ---
+«☐ »{cyan}open task
+«☑ »{green}«done task»{darkgray crossed_out}
+«☑ »{green}«done uppercase»{darkgray crossed_out}
+«│ »{darkgray}«☐ »{cyan}nested task
+«☐ »{cyan}
+«• »{cyan}[x]not a task (no space)

@@ -1,0 +1,2 @@
+// fold the item under the cursor: its sub-items are hidden
+<C-k>

@@ -1,0 +1,14 @@
+--- source after keys ---
+- one
+- two
+after
+- [x] task
+- [ ] next
+end
+--- rendered (cursor on line 6) ---
+«• »{cyan}one
+«• »{cyan}two
+after
+«☑ »{green}«task»{darkgray crossed_out}
+«☐ »{cyan}next
+end

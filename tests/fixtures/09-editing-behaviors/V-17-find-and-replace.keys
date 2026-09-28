@@ -1,0 +1,2 @@
+// replace the first "cat" with Enter, then all the others with Ctrl+A
+<C-h>cat<Tab>dog<Enter><C-a><Esc>

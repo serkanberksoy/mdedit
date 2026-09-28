@@ -1,0 +1,4 @@
+--- rendered ---
+Run «cargo test»{lightyellow} to test.
+Markup inside code is literal: «**not bold** [[not a link]] #not-a-tag»{lightyellow}
+Double backticks: «code with ` inside»{lightyellow}

@@ -1,0 +1,4 @@
+--- rendered ---
+Autolink: «https://example.com/autolink»{blue underlined}
+Mail: «mailto:me@example.com»{blue underlined} and «me@example.com»{blue underlined}
+Not links: <b>html</b>, a < b > c, <not a link>

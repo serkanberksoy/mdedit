@@ -1,0 +1,5 @@
+--- rendered ---
+«Rust»{blue underlined} and «a note»{lightblue}
+«bold»{lightblue bold}« link»{lightblue} and «spaced»{lightblue} and see «🖼 logo»{lightblue} here
+«titled»{lightblue} and «mail»{blue underlined}
+[not a link] (x) and [empty]() stay as typed

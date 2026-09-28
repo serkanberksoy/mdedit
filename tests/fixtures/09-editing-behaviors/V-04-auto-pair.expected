@@ -1,0 +1,4 @@
+--- source after keys ---
+call(x [[note]]) **bold** (a)
+--- rendered (cursor on line 1) ---
+call(x [[note]]) **bold** (a)

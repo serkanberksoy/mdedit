@@ -1,0 +1,14 @@
+--- rendered ---
+«█ HEADING 1»{magenta bold underlined}
+
+«▌ Heading 2»{cyan bold}
+
+«▎ Heading 3»{yellow bold}
+
+«Heading 4»{green bold}
+
+«Heading 5»{blue bold}
+
+«Heading 6»{gray italic}
+«#Not»{lightcyan bg:rgb(25,55,100)} a heading (no space)
+####### Not a heading (seven hashes)

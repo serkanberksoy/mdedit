@@ -1,0 +1,2 @@
+- [.] log one
+- [x] done task

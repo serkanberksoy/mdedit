@@ -1,0 +1,10 @@
+--- source after keys ---
+- [.] log one
+- [.] log two
+- [x] done task
+- [ ] next task
+--- rendered (cursor on line 4) ---
+«⦿ »{gray}log one
+«⦿ »{gray}log two
+«☑ »{green}«done task»{darkgray crossed_out}
+«- [ ] »{darkgray}next task

@@ -1,0 +1,12 @@
+--- source after keys ---
+# Section A
+text a
+## Sub
+text
+# Section B
+text b
+--- rendered (cursor on line 5) ---
+«█ SECTION A»{magenta bold underlined}« ▸ 3 lines»{darkgray}
+
+«#»{darkgray}« Section B»{magenta bold underlined}
+text b

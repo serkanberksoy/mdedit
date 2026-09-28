@@ -1,0 +1,4 @@
+--- rendered ---
+Tags: «#tag»{lightcyan bg:rgb(25,55,100)} «#nested/tag»{lightcyan bg:rgb(25,55,100)} «#with-dash»{lightcyan bg:rgb(25,55,100)} «#under_score»{lightcyan bg:rgb(25,55,100)}
+Not tags: issue #12, a#b, lone # sign
+«#start-of-line»{lightcyan bg:rgb(25,55,100)} tag

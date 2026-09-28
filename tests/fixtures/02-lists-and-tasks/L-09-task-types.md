@@ -1,0 +1,4 @@
+- [/] in progress
+- [>] forwarded
+- [-] cancelled / dropped
+- [!] important / priority

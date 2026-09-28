@@ -1,0 +1,12 @@
+--- rendered ---
+«╭─ ⧉ notes/Note»{darkgray}
+«│ »{darkgray}«█ NOTE TITLE»{magenta bold underlined}
+«│ »{darkgray}«• »{cyan}a bullet
+«│ »{darkgray}«bold»{bold} text
+«│ »{darkgray}
+«│ »{darkgray}«▌ Part two»{cyan bold}
+«│ »{darkgray}section text
+«│ »{darkgray}
+«│ »{darkgray}«▌ Part three»{cyan bold}
+«│ »{darkgray}not shown
+«╰─»{darkgray}

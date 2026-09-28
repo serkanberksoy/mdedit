@@ -1,0 +1,14 @@
+--- rendered ---
+«╭─»{darkgray}
+«│ »{darkgray}«plain **code** [[not a link]] #not-a-tag»{lightyellow}
+«│ »{darkgray}«- not a list»{lightyellow}
+«╰─»{darkgray}
+
+«╭─»{darkgray}
+«│ »{darkgray}«tilde fence»{lightyellow}
+«╰─»{darkgray}
+
+«┃ »{blue}«☑ Today»{blue bold}
+«┃ »{blue}«╭─ tasks»{darkgray}
+«┃ »{blue}«│ »{darkgray}«not done»{lightyellow}
+«┃ »{blue}«╰─»{darkgray}

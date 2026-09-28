@@ -1,0 +1,10 @@
+--- source after keys ---
+1. one
+2. two
+3. new
+4. three
+--- rendered (cursor on line 3) ---
+«1. »{cyan}one
+«2. »{cyan}two
+«3. »{darkgray}new
+«4. »{cyan}three

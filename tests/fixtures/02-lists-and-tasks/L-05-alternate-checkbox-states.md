@@ -1,0 +1,11 @@
+- [ ] open
+- [x] done
+- [-] cancelled
+- [.] log entry
+- [/] in progress
+- [>] forwarded
+- [<] scheduled
+- [!] important
+- [?] question
+- [*] star
+- [~] unknown state

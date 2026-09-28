@@ -1,0 +1,6 @@
+--- source after keys ---
+# Title
+- **bold** item
+--- rendered (cursor on line 1) ---
+«#»{darkgray}« Title»{magenta bold underlined}
+«- »{darkgray}**bold** item

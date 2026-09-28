@@ -1,0 +1,2 @@
+// fold the section under the cursor, then Down skips its hidden lines
+<C-k><Down>

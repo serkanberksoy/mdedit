@@ -1,0 +1,12 @@
+--- source after keys ---
+- [x] one
+- [ ] two
+- [x] three
+not a task
+- [ ] plain text
+--- rendered (cursor on line 5) ---
+«☑ »{green}«one»{darkgray crossed_out}
+«☐ »{cyan}two
+«☑ »{green}«three»{darkgray crossed_out}
+not a task
+«- [ ] »{darkgray}plain text

@@ -1,0 +1,8 @@
+# Build output
+/target
+
+# Local, per-user Claude Code settings
+.claude/settings.local.json
+
+# Personal notes, kept out of the repository
+/personal

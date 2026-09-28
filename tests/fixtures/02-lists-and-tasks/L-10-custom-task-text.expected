@@ -1,0 +1,5 @@
+--- rendered ---
+«? »{yellow}a custom character with its own glyph
+«[a] »{cyan}any other single character is shown as it is
+«• »{cyan}[doing] a word is not a task state: plain list text
+«☑ »{green}«still a normal done task»{darkgray crossed_out}

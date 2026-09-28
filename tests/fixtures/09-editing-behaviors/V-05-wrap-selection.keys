@@ -1,0 +1,2 @@
+// select "select" with Shift+Right, type * twice: bold, still selected
+<S-Right><S-Right><S-Right><S-Right><S-Right><S-Right>**

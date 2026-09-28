@@ -1,0 +1,1 @@
+Typing [[ should suggest notes.

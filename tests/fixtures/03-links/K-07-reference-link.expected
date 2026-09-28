@@ -1,0 +1,6 @@
+--- rendered ---
+See «the docs»{lightblue} for more.
+Also «collapsed»{lightblue} and «Docs»{lightblue} (labels ignore case).
+
+«[docs]: »{darkgray}«https://example.com/docs»{blue underlined}
+«[collapsed]: »{darkgray}«<Note name.md>»{lightblue}« "Title"»{darkgray}

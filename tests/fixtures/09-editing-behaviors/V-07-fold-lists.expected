@@ -1,0 +1,8 @@
+--- source after keys ---
+- parent
+  - child 1
+  - child 2
+- sibling
+--- rendered (cursor on line 1) ---
+«- »{darkgray}parent« ▸ 2 lines»{darkgray}
+«• »{cyan}sibling

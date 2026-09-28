@@ -1,0 +1,4 @@
+--- rendered ---
+This is «bold»{bold} text and «also bold»{bold} text.
+«Bold at start»{bold} and at the «end»{bold}
+An unclosed **marker stays raw

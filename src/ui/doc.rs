@@ -1,0 +1,434 @@
+//! A document laid out for display: each line rendered (or raw, at the
+//! cursor) and soft-wrapped into screen rows, with folds, tables, embeds,
+//! syntax highlighting and heading sizes.
+
+use super::*;
+use crate::images::{self, ImageLink, decoded_target, image_link};
+use crate::resolver::Resolver;
+use crate::selection::Pos;
+use crate::wrap::ImageSlot;
+
+/// Where a document's links point: the resolver and the note's own file
+/// (`None` for an untitled note).
+#[derive(Clone, Copy)]
+pub struct Links<'a> {
+    pub resolver: &'a dyn Resolver,
+    pub from: Option<&'a Path>,
+}
+
+/// A document prepared for display: its block structure, the line shown
+/// raw (the cursor line), and the user's rendering options.
+pub(super) struct Doc<'a> {
+    lines: &'a [String],
+    structure: Arc<Structure>,
+    cursor: Option<usize>,
+    /// The selected range (V-19): its lines are shown raw, like the cursor
+    /// line, with the selected text reversed.
+    selection: Option<(Pos, Pos)>,
+    options: Options,
+    /// Ctrl+K fold choices by header line (`true` = collapsed).
+    folds: &'a HashMap<usize, bool>,
+    /// Syntax-highlighted fenced code blocks, by first body line (B-09).
+    highlighted: Vec<(usize, Arc<Highlighted>)>,
+    /// How embeds and images find their files; `None` shows embeds as
+    /// links (e.g. inside an embedded note, so embeds can't loop).
+    links: Option<Links<'a>>,
+    /// The size of a terminal cell in pixels, to size images (E-04);
+    /// `None` when images are off.
+    image_cell: Option<(u16, u16)>,
+}
+
+impl<'a> Doc<'a> {
+    pub(super) fn new(
+        lines: &'a [String],
+        cursor: Option<usize>,
+        options: Options,
+        folds: &'a HashMap<usize, bool>,
+        links: Option<Links<'a>>,
+    ) -> Self {
+        let structure = analyze_cached(lines);
+        let editing = |a, b| touches(cursor, None, a, b);
+        let highlighted = highlight_code_blocks(lines, &structure, editing);
+        Doc {
+            lines,
+            structure,
+            cursor,
+            selection: None,
+            options,
+            folds,
+            highlighted,
+            links,
+            image_cell: Some((10, 20)),
+        }
+    }
+
+    /// The same document with images sized for cells of `cell` pixels, or
+    /// only their titles if `None` (images off).
+    pub(super) fn with_image_cell(mut self, cell: Option<(u16, u16)>) -> Self {
+        self.image_cell = cell;
+        self
+    }
+
+    /// An image embed line (`![[photo.png]]`, E-04 / E-05): a title row,
+    /// then empty framed rows that the image is drawn over.
+    fn image_rows(&self, link: &ImageLink, width: usize) -> Wrapped {
+        let dim = Style::default().fg(Color::DarkGray);
+        let mut out = Wrapped::empty();
+        let mut title = |text: String| out.push_line(Line::from(Span::styled(text, dim)));
+        let label = if link.alt.is_empty() {
+            link.name()
+        } else {
+            &link.alt
+        };
+        let file = self
+            .links
+            .filter(|_| !link.is_remote())
+            .and_then(|l| l.resolver.resolve(l.from, &decoded_target(link)).ok());
+        let image = file.as_deref().and_then(images::load);
+        match (&file, &image) {
+            _ if link.is_remote() => title(format!(
+                "╭─ 🖼 {label} · {} (web images aren't downloaded)",
+                link.target
+            )),
+            (None, _) => title(format!("╭─ ⚠ {} (not found)", link.name())),
+            (Some(_), None) => title(format!("╭─ ⚠ {} (can't show this image)", link.name())),
+            (Some(path), Some(image)) => {
+                let (w, h) = (image.width(), image.height());
+                let at = match (link.width, link.height) {
+                    (Some(pw), Some(ph)) => format!(" at {pw}×{ph} px"),
+                    (Some(pw), None) => format!(" at {pw} px wide"),
+                    (None, Some(ph)) => format!(" at {ph} px high"),
+                    (None, None) => String::new(),
+                };
+                let Some(cell) = self.image_cell else {
+                    title(format!("╭─ 🖼 {label} · {w}×{h}{at} (images are off)"));
+                    out.push_line(Line::from(Span::styled("╰─", dim)));
+                    return out;
+                };
+                title(format!("╭─ 🖼 {label} · {w}×{h}{at}"));
+                let max_cols = u16::try_from(width.saturating_sub(2)).unwrap_or(u16::MAX);
+                let (cols, rows) = images::cell_size(
+                    (w, h),
+                    (link.width, link.height),
+                    cell,
+                    if width == 0 { u16::MAX } else { max_cols },
+                );
+                for _ in 0..rows {
+                    out.push_line(Line::from(Span::styled("│", dim)));
+                }
+                out.image = Some(ImageSlot {
+                    path: path.clone(),
+                    row: 1,
+                    col: 2,
+                    cols,
+                    rows,
+                });
+            }
+        }
+        out.push_line(Line::from(Span::styled("╰─", dim)));
+        out
+    }
+
+    /// The same document with `selection` shown.
+    pub(super) fn with_selection(mut self, selection: Option<(Pos, Pos)>) -> Self {
+        if selection.is_some() {
+            self.selection = selection;
+            let (cursor, structure) = (self.cursor, &self.structure);
+            let editing = |a, b| touches(cursor, selection, a, b);
+            self.highlighted = highlight_code_blocks(self.lines, structure, editing);
+        }
+        self
+    }
+
+    /// Whether line `i` is shown raw for editing: the cursor line or a
+    /// selected line.
+    fn active(&self, i: usize) -> bool {
+        touches(self.cursor, self.selection, i, i)
+    }
+
+    /// Reverses the selected part of line `i`'s raw view `r`.
+    fn show_selection(&self, i: usize, r: &mut Rendered) {
+        if let Some((from, to)) = self.selected_columns(i) {
+            // The raw view is the line with tabs widened.
+            let tabs = |col: usize| {
+                self.lines[i]
+                    .chars()
+                    .take(col)
+                    .filter(|&c| c == '\t')
+                    .count()
+            };
+            let widen = |col: usize| col + tabs(col) * (TAB.len() - 1);
+            reverse_chars(&mut r.line, widen(from), widen(to));
+        }
+    }
+
+    /// The selected char columns of line `i`, if any.
+    fn selected_columns(&self, i: usize) -> Option<(usize, usize)> {
+        let ((r0, c0), (r1, c1)) = self.selection?;
+        if !(r0..=r1).contains(&i) {
+            return None;
+        }
+        let from = if i == r0 { c0 } else { 0 };
+        let to = if i == r1 {
+            c1
+        } else {
+            self.lines[i].chars().count()
+        };
+        Some((from, to))
+    }
+
+    /// An embed line (`![[Note]]`, E-01 / E-02) drawn as a frame around the
+    /// other note, rendered without a cursor and with its own embeds left
+    /// as links.
+    fn embed_rows(&self, path: &str, heading: Option<&str>, width: usize) -> Option<Wrapped> {
+        let links = self.links?;
+        let dim = Style::default().fg(Color::DarkGray);
+        let title = match heading {
+            Some(h) => format!("{path} › {h}"),
+            None => path.to_string(),
+        };
+        let content = links
+            .resolver
+            .resolve(links.from, path)
+            .ok()
+            .and_then(|file| links.resolver.load(&file))
+            .and_then(|lines| match heading {
+                Some(h) => section(&lines, h),
+                None => Some(lines.to_vec()),
+            });
+        let mut out = Wrapped::empty();
+        let Some(content) = content else {
+            out.push_line(Line::from(Span::styled(
+                format!("╭─ ⚠ {title} (not found)"),
+                dim,
+            )));
+            out.push_line(Line::from(Span::styled("╰─", dim)));
+            return Some(out);
+        };
+        out.push_line(Line::from(Span::styled(format!("╭─ ⧉ {title}"), dim)));
+        let no_folds = HashMap::new();
+        let inner = Doc::new(&content, None, self.options, &no_folds, None);
+        for k in 0..content.len() {
+            for row in inner.rows(k, width.saturating_sub(2)).rows {
+                let mut spans = vec![Span::styled("│ ", dim)];
+                spans.extend(row.spans);
+                out.push_line(Line::from(spans));
+            }
+        }
+        out.push_line(Line::from(Span::styled("╰─", dim)));
+        Some(out)
+    }
+
+    /// Line `i` wrapped into screen rows (none if it's in a collapsed fold).
+    pub(super) fn rows(&self, i: usize, width: usize) -> Wrapped {
+        let (lines, structure) = (self.lines, &self.structure);
+        // Source mode (V-13): every line raw; no folds, embeds or tables.
+        if self.options.source_mode {
+            let mut r = render_source_with(&lines[i], &self.options);
+            self.show_selection(i, &mut r);
+            return wrap(&r.line, r.indent, width);
+        }
+        if structure.hiding(i, self.folds).next().is_some() {
+            return Wrapped::empty();
+        }
+        // Tables (B-11): rows aren't wrapped; borders above and below.
+        if let LineContext::TableRow { table, kind } = &structure.context[i]
+            && structure
+                .reveal_group(i)
+                .is_none_or(|(a, b)| !touches(self.cursor, self.selection, a, b))
+        {
+            let t = &structure.tables[*table];
+            let r = self.view(i);
+            let mut rows = wrap(&r.line, 0, 0);
+            if *kind == TableRowKind::Header {
+                rows.pad_top_with(table_border(&t.widths, "┌", "┬", "┐"));
+            }
+            if i == t.end {
+                rows.pad_bottom_with(table_border(&t.widths, "└", "┴", "┘"));
+            }
+            return rows;
+        }
+        if !self.active(i)
+            && structure.context[i] == LineContext::Normal
+            && let Some(link) = image_link(&lines[i])
+        {
+            return self.image_rows(&link, width);
+        }
+        if !self.active(i)
+            && structure.context[i] == LineContext::Normal
+            && let Some(Link::File { path, heading }) = embed_target(&lines[i])
+            && let Some(rows) = self.embed_rows(&path, heading.as_deref(), width)
+        {
+            return rows;
+        }
+        let mut r = self.view(i);
+        self.show_selection(i, &mut r);
+        // Fold markers: a foldable callout's header ends with ▸ (folded) or
+        // ▾ (B-05); a folded section or list item says how much is hidden,
+        // also while it's being edited (V-06, V-07).
+        for fold in structure.folds.iter().filter(|f| f.header == i) {
+            let collapsed = structure.is_collapsed(fold, self.folds);
+            if fold.kind == FoldKind::Callout && !self.active(i) {
+                let style = r.line.spans.last().map(|s| s.style).unwrap_or_default();
+                let sign = if collapsed { " ▸" } else { " ▾" };
+                r.line.spans.push(Span::styled(sign, style));
+            } else if fold.kind != FoldKind::Callout && collapsed {
+                let n = fold.end + 1 - fold.start;
+                let lines = if n == 1 { "line" } else { "lines" };
+                r.line.spans.push(Span::styled(
+                    format!(" ▸ {n} {lines}"),
+                    Style::default().fg(Color::DarkGray),
+                ));
+            }
+        }
+        // R-16: level-1/2 headings (not being edited) in double-size lines.
+        let heading = structure.heading(lines, i).map(|(level, _)| level);
+        let level = heading.filter(|&l| l <= 2 && self.options.heading_sizes && !self.active(i));
+        let mut rows = match level {
+            Some(level) => {
+                let mut rows = wrap(&r.line, r.indent, width / 2);
+                rows.enlarge(level);
+                rows
+            }
+            None => wrap(&r.line, r.indent, width),
+        };
+        // R-17: a blank row above a heading that follows a non-blank line, in
+        // the rendered and the raw view alike (so the text doesn't jump).
+        if heading.is_some() && i > 0 && !lines[i - 1].trim().is_empty() {
+            rows.pad_top(1);
+        }
+        rows
+    }
+
+    /// The highlighted pieces of fenced code line `i`, if its block has them.
+    fn highlighted_line(&self, i: usize) -> Option<&Vec<(Style, String)>> {
+        let k = self.highlighted.partition_point(|&(first, _)| first <= i);
+        let (first, block) = self.highlighted.get(k.checked_sub(1)?)?;
+        block.get(i - first)
+    }
+
+    /// Renders line `i`. The cursor line is shown raw; so is every line of a
+    /// reveal group (frontmatter, fenced code) that contains the cursor.
+    fn view(&self, i: usize) -> Rendered {
+        let (lines, structure) = (self.lines, &self.structure);
+        let line = &lines[i];
+        let revealed = match structure.reveal_group(i) {
+            Some((start, end)) => touches(self.cursor, self.selection, start, end),
+            None => self.active(i),
+        };
+        if revealed {
+            return render_source_with(line, &self.options);
+        }
+        match &structure.context[i] {
+            LineContext::Normal => render_with(line, &self.options),
+            LineContext::Frontmatter => render_frontmatter_line(line).into(),
+            LineContext::FenceOpen { lang } => render_fence_open(lang).into(),
+            LineContext::FenceBody => match self.highlighted_line(i) {
+                Some(pieces) => render_code_pieces(pieces),
+                None => render_code_line(line),
+            },
+            LineContext::FenceClose => render_fence_close().into(),
+            LineContext::Quote { callouts, code } => render_quote(line, callouts, code.as_ref()),
+            LineContext::TableRow { table, kind } => {
+                let t = &structure.tables[*table];
+                match kind {
+                    TableRowKind::Separator => table_border(&t.widths, "├", "┼", "┤").into(),
+                    TableRowKind::Header => {
+                        render_table_row(line, &t.widths, &t.aligns, true).into()
+                    }
+                    TableRowKind::Body => {
+                        render_table_row(line, &t.widths, &t.aligns, false).into()
+                    }
+                }
+            }
+            LineContext::IndentedCode => render_code_line(dedent_code(line)),
+            LineContext::LinkDefinition => render_link_definition(line).into(),
+            LineContext::ListContinuation { owner } => render_continuation(line, &lines[*owner]),
+            LineContext::SetextHeading { level } => {
+                let heading = format!("{} {}", "#".repeat(*level as usize), line.trim());
+                render_with(&heading, &self.options)
+            }
+            LineContext::SetextUnderline { level, width } => {
+                let rule = if *level == 1 { "═" } else { "─" };
+                let color = heading_style_with(*level, &self.options)
+                    .fg
+                    .unwrap_or_default();
+                Line::from(Span::styled(
+                    rule.repeat(*width),
+                    Style::default().fg(color),
+                ))
+                .into()
+            }
+        }
+    }
+}
+
+/// Whether lines `a..=b` contain the cursor line or a selected line.
+fn touches(cursor: Option<usize>, selection: Option<(Pos, Pos)>, a: usize, b: usize) -> bool {
+    cursor.is_some_and(|c| (a..=b).contains(&c))
+        || selection.is_some_and(|((r0, _), (r1, _))| r0 <= b && a <= r1)
+}
+
+/// Reverses the chars `from..to` of `line` (the selection), splitting spans
+/// where needed.
+fn reverse_chars(line: &mut Line<'static>, from: usize, to: usize) {
+    let mut at = 0;
+    let mut spans = Vec::new();
+    for span in line.spans.drain(..) {
+        let len = span.content.chars().count();
+        let (a, b) = (from.clamp(at, at + len) - at, to.clamp(at, at + len) - at);
+        at += len;
+        if a == b {
+            spans.push(span);
+            continue;
+        }
+        let text: Vec<char> = span.content.chars().collect();
+        let piece = |x: usize, y: usize| text[x..y].iter().collect::<String>();
+        let selected = span.style.add_modifier(Modifier::REVERSED);
+        spans.push(Span::styled(piece(0, a), span.style));
+        spans.push(Span::styled(piece(a, b), selected));
+        spans.push(Span::styled(piece(b, len), span.style));
+    }
+    spans.retain(|s| !s.content.is_empty());
+    line.spans = spans;
+}
+
+/// Highlights every fenced code block whose language is known (B-09),
+/// except those being edited (shown raw), in document order by first body
+/// line. Results are cached by block text and shared, so unchanged blocks
+/// cost nothing on later frames.
+fn highlight_code_blocks(
+    lines: &[String],
+    structure: &Structure,
+    editing: impl Fn(usize, usize) -> bool,
+) -> Vec<(usize, Arc<Highlighted>)> {
+    let mut out = Vec::new();
+    for (open, context) in structure.context.iter().enumerate() {
+        let LineContext::FenceOpen { lang } = context else {
+            continue;
+        };
+        if structure
+            .reveal_group(open)
+            .is_some_and(|(a, b)| editing(a, b))
+        {
+            continue;
+        }
+        let body: Vec<&str> = (open + 1..lines.len())
+            .take_while(|&k| structure.context[k] == LineContext::FenceBody)
+            .map(|k| lines[k].as_str())
+            .collect();
+        if let Some(pieces) = highlight_cached(lang, &body) {
+            out.push((open + 1, pieces));
+        }
+    }
+    out
+}
+
+/// An indented code line without its 4 columns of indentation.
+fn dedent_code(line: &str) -> &str {
+    if let Some(rest) = line.strip_prefix('\t') {
+        return rest;
+    }
+    let spaces = line.len() - line.trim_start_matches(' ').len();
+    &line[spaces.min(4)..]
+}

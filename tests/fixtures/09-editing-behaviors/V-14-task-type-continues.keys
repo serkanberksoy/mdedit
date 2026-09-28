@@ -1,0 +1,3 @@
+// Enter after a log entry continues as a log entry;
+// Enter after a done task starts an open one
+<End><Enter>log two<Down><End><Enter>next task

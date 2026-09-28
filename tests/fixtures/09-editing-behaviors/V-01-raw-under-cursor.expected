@@ -1,0 +1,10 @@
+--- source after keys ---
+# Heading
+- **bold** item
+- [x] [[Note|alias]] done
+plain line
+--- rendered (cursor on line 3) ---
+«█ HEADING»{magenta bold underlined}
+«• »{cyan}«bold»{bold} item
+«- [x] »{darkgray}«[[Note|alias]] done»{crossed_out}
+plain line

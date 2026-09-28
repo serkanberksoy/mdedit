@@ -1,0 +1,2 @@
+// type two words, undo both (a word at a time), redo one
+<End> two three<C-z><C-z><C-y>

@@ -1,0 +1,6 @@
+--- source after keys ---
+**bold** word
+next line
+--- rendered (cursor on line 2) ---
+«**bold** word»{reversed}
+next line

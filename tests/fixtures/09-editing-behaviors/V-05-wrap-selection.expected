@@ -1,0 +1,4 @@
+--- source after keys ---
+**select** me
+--- rendered (cursor on line 1) ---
+**«select»{reversed}** me

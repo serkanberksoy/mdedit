@@ -1,0 +1,2 @@
+// close/reopen tasks with Ctrl+L, then turn plain text into a task with Ctrl+T
+<C-l><Down><C-l><Down><C-l><Down><C-l><Down><C-t>

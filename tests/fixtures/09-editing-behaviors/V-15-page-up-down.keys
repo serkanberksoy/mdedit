@@ -1,0 +1,2 @@
+// a screen is 10 rows: Page Down twice, Page Up once
+<Right><Right><PgDn><PgDn><PgUp>

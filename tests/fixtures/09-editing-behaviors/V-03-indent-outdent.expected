@@ -1,0 +1,10 @@
+--- source after keys ---
+- parent
+  - child
+  - [ ] task
+- tab child
+--- rendered (cursor on line 4) ---
+«• »{cyan}parent
+«│ »{darkgray}«◦ »{cyan}child
+«│ »{darkgray}«☐ »{cyan}task
+«- »{darkgray}tab child

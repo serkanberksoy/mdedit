@@ -1,0 +1,6 @@
+- [ ] open task
+- [x] done task
+- [X] done uppercase
+  - [ ] nested task
+- [ ]
+- [x]not a task (no space)

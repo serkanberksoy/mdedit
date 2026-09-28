@@ -1,0 +1,7 @@
+--- rendered ---
+«┌────────┬────────┬───────┐»{darkgray}
+«│»{darkgray} «Left»{bold}   «│»{darkgray} «Center»{bold} «│»{darkgray} «Right»{bold} «│»{darkgray}
+«├────────┼────────┼───────┤»{darkgray}
+«│»{darkgray} a      «│»{darkgray}   b    «│»{darkgray}     c «│»{darkgray}
+«│»{darkgray} longer «│»{darkgray}  text  «│»{darkgray} 12345 «│»{darkgray}
+«└────────┴────────┴───────┘»{darkgray}

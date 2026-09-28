@@ -1,0 +1,4 @@
+- [?] a custom character with its own glyph
+- [a] any other single character is shown as it is
+- [doing] a word is not a task state: plain list text
+- [x] still a normal done task
