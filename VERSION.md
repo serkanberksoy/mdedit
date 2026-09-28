@@ -1,6 +1,6 @@
 # Version history
 
-Current version: **2.0.0**
+Current version: **2.1.0**
 
 ## Versioning rules
 
@@ -28,6 +28,16 @@ Entry format: `## X.Y.Z (YYYY-MM-DD)`, followed by *Added / Changed / Fixed*
 sections that name feature IDs where there are any.
 
 ---
+
+## 2.1.0 (2026-09-29)
+
+### Added
+- **V-20 highlight search matches**: while the search (Ctrl+F) or replace
+  (Ctrl+H) prompt is open, every match on screen is highlighted in yellow
+  and the one at the cursor in red, so a match is easy to spot on a large
+  screen. Matches are found in the text as shown: in rendered headings
+  (shown in capitals), in text whose markup is hidden, in tables and code.
+  The highlights go away when the prompt closes.
 
 ## 2.0.0 (2026-09-29)
 

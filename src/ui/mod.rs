@@ -43,6 +43,14 @@ mod popups;
 use doc::{Doc, Links};
 use popups::{draw_dialog, draw_view_popup};
 
+/// Search matches on screen while searching (V-20), and the one at the
+/// cursor.
+pub const SEARCH_MATCH: Style = Style::new().fg(Color::Black).bg(Color::LightYellow);
+pub const CURRENT_MATCH: Style = Style::new()
+    .fg(Color::Black)
+    .bg(Color::LightRed)
+    .add_modifier(Modifier::BOLD);
+
 /// The mdedit program's key hints in the status bar.
 pub const KEY_HINTS: &str = "^O open ^S save ^⌥S save as ^X exit ^V source ^T task ^L close";
 
@@ -110,6 +118,7 @@ impl StatefulWidget for EditorWidget<'_> {
         };
         let doc = Doc::new(&ed.lines, Some(ed.row), options, &view.folds, Some(links))
             .with_selection(ed.selection())
+            .with_search(search_query(&view.mode), ed.col)
             .with_image_cell(image_cell(shared));
         let rows_of = |i: usize| doc.rows(i, width);
 
@@ -182,6 +191,16 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     }
 }
 
+/// The search being typed in the view's prompt (search, or the find field
+/// of replace), whose matches are highlighted (V-20).
+fn search_query(mode: &ViewMode) -> Option<&str> {
+    match mode {
+        ViewMode::Search(s) => Some(&s.query),
+        ViewMode::Replace(r) => Some(&r.find),
+        ViewMode::Edit | ViewMode::EmojiPicker(_) => None,
+    }
+}
+
 /// The terminal's cell size in pixels, for sizing images; `None` when
 /// images are off.
 fn image_cell(shared: &Shared) -> Option<(u16, u16)> {
@@ -222,6 +241,7 @@ pub fn render_app(
     let options = app.shared.render_options(view.source_mode);
     let doc = Doc::new(&view.editor.lines, cursor, options, &view.folds, links)
         .with_selection(view.editor.selection())
+        .with_search(search_query(&view.mode), view.editor.col)
         .with_image_cell(image_cell(&app.shared));
     (0..view.editor.lines.len())
         .flat_map(|i| doc.rows(i, width).rows)
@@ -386,6 +406,41 @@ mod tests {
         assert_eq!(rows[4], "│ ◦ nested");
         assert_eq!(rows[5], "plain");
         assert!(rows[6].contains("Ln 3, Col 1"));
+    }
+
+    #[test]
+    fn search_matches_are_highlighted_while_searching() {
+        use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+        let mut a = app("one embed two\n# Embeds\nx **embed** y");
+        a.handle_key(KeyEvent::new(KeyCode::Char('f'), KeyModifiers::CONTROL));
+        for c in "embed".chars() {
+            a.handle_key(KeyEvent::new(KeyCode::Char(c), KeyModifiers::NONE));
+        }
+        let mut term = Terminal::new(TestBackend::new(40, 6)).unwrap();
+        term.draw(|f| draw(f, &mut a)).unwrap();
+        let buf = term.backend().buffer().clone();
+        let bg = |x: u16, y: u16| buf[(x, y)].bg;
+        let text = |y: u16| -> String { (0..40).map(|x| buf[(x, y)].symbol()).collect() };
+        // The match at the cursor (line 1, raw) is the current one.
+        assert!(text(0).starts_with("one embed two"), "{}", text(0));
+        assert!((4..9).all(|x| bg(x, 0) == CURRENT_MATCH.bg.unwrap()));
+        assert_ne!(bg(3, 0), CURRENT_MATCH.bg.unwrap());
+        // Other matches, found in the text as shown: the heading reads
+        // `EMBEDS`, the bold markers are hidden.
+        let heading = text(2);
+        let at = heading.find("EMBED").expect("heading shown") as u16;
+        let at = heading[..at as usize].chars().count() as u16;
+        assert!(
+            (at..at + 5).all(|x| bg(x, 2) == SEARCH_MATCH.bg.unwrap()),
+            "{heading}"
+        );
+        assert!(text(3).starts_with("x embed y"), "{}", text(3));
+        assert!((2..7).all(|x| bg(x, 3) == SEARCH_MATCH.bg.unwrap()));
+        // Closing the search clears them.
+        a.handle_key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
+        term.draw(|f| draw(f, &mut a)).unwrap();
+        let buf = term.backend().buffer().clone();
+        assert!((0..40).all(|x| buf[(x, 3)].bg != SEARCH_MATCH.bg.unwrap()));
     }
 
     #[test]

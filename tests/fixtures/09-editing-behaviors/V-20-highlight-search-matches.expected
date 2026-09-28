@@ -1,0 +1,9 @@
+--- source after keys ---
+An embed here, and **Embed** there.
+# Embeds
+- a list with an embed
+--- rendered (cursor on line 1) ---
+An «embed»{black bg:lightred bold} here, and **«Embed»{black bg:lightyellow}** there.
+
+«█ »{magenta bold underlined}«EMBED»{black bg:lightyellow bold underlined}«S»{magenta bold underlined}
+«• »{cyan}a list with an «embed»{black bg:lightyellow}

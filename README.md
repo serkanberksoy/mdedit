@@ -5,7 +5,7 @@ is shown formatted, except the line under the cursor, which switches to raw
 Markdown so you can edit it. Built in Rust with
 [ratatui](https://ratatui.rs).
 
-**Version:** 2.0.0 · **Stage:** Milestones 1 (core editor) and 2 (links) complete; next: M3 · [Version history](VERSION.md)
+**Version:** 2.1.0 · **Stage:** Milestones 1 (core editor) and 2 (links) complete; next: M3 · [Version history](VERSION.md)
 
 ```
 █ MARCH 14TH, 2026                    ← # heading, rendered
@@ -18,7 +18,7 @@ Markdown so you can edit it. Built in Rust with
 
 ## Features
 
-What works today (71 of 88 tracked Obsidian features have approved tests;
+What works today (72 of 89 tracked Obsidian features have approved tests;
 see [tests/TEST_MATRIX.md](tests/TEST_MATRIX.md)):
 
 | Area | Supported |
@@ -61,7 +61,7 @@ cargo run --release -- note.md    # fully optimized build (dev builds use opt-le
 | Page Up / Page Down | Move a screen up or down |
 | Enter | New line; continues bullets and tasks, and ends the list on an empty item |
 | Tab / Shift-Tab | Nest / un-nest a list item or task |
-| Ctrl+F | Search: jumps to the first match as you type; ↑/↓ previous/next, Enter keeps the position, Esc goes back (case-insensitive unless the search has a capital) |
+| Ctrl+F | Search: jumps to the first match as you type, and every match on screen is highlighted (the current one in red); ↑/↓ previous/next, Enter keeps the position, Esc goes back (case-insensitive unless the search has a capital) |
 | Ctrl+H (or Ctrl+R) | Find and replace: type the search, Tab to the replacement; Enter replaces the match and goes to the next, ↑/↓ skip, Ctrl+A replaces all, Esc closes |
 | Ctrl+Z / Ctrl+Y | Undo / redo, up to 5 steps (`undo_steps` setting); Ctrl+Shift+Z also redoes where the terminal reports it; typing undoes a word at a time |
 | Shift + arrows / Home / End / PgUp / PgDn, Ctrl+A | Select text (selected lines are shown raw). Typing replaces the selection, Backspace / Delete delete it, Tab / Shift-Tab indent its lines |

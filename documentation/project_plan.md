@@ -105,7 +105,7 @@ Obsidian when editing.
 
 ### 2.5 Live Preview editing behaviors (V-01 … V-13)
 
-- ✅ V-01 show raw syntax under cursor (the whole line, by design) · V-02 list / task continuation · V-03 indent / outdent · V-06 fold headings · V-07 fold lists · V-08 soft wrap · V-11 toggle checkbox · V-13 source mode · V-14 task type continues on Enter · V-15 page Up / Page Down · V-16 search · V-17 find and replace · V-18 undo / redo · V-05 wrap selection · V-09 paste URL over selection · V-19 text selection · V-04 auto-pair
+- ✅ V-01 show raw syntax under cursor (the whole line, by design) · V-02 list / task continuation · V-03 indent / outdent · V-06 fold headings · V-07 fold lists · V-08 soft wrap · V-11 toggle checkbox · V-13 source mode · V-14 task type continues on Enter · V-15 page Up / Page Down · V-16 search · V-17 find and replace · V-18 undo / redo · V-05 wrap selection · V-09 paste URL over selection · V-19 text selection · V-04 auto-pair · V-20 highlight search matches (2.1.0)
 
 ### 2.6 Suggested order inside M1
 

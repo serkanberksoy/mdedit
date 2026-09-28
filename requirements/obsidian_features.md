@@ -165,6 +165,7 @@ Not syntax, but part of what makes Obsidian feel the way it does.
 | V-13 | Source mode | plain Markdown, no rendering | ✅ | S | M1 | Ctrl+V toggles; every line raw (markers dimmed, headings colored), no folds/embeds/tables; `-t` starts in it |
 | V-15 | Page Up / Page Down | PgUp / PgDn | ✅ | S | M1 | A screen of rows minus one; view scrolls with it; keeps the column |
 | V-16 | Search | Ctrl+F; F3 / Shift+F3 next / previous | ✅ | M | M1 | Ctrl+F jumps as you type; ↓/↑ or F3/Shift+F3 next/previous; Enter keeps, Esc goes back; smart case; wraps |
+| V-20 | Highlight search matches | every match on screen while Ctrl+F / Ctrl+H is open | ✅ | S | M1 | Found in the text as shown (rendered headings, hidden markup); the match at the cursor in a stronger color; cleared when the prompt closes |
 | V-19 | Text selection | Shift + arrows / Home / End / Page Up / Page Down, Ctrl+A selects all | ✅ | M | M1 | Typing replaces the selection, Backspace / Delete delete it, Tab indents its lines; selected lines are shown raw |
 | V-18 | Undo / redo | Ctrl+Z undoes, Ctrl+Y (or Ctrl+Shift+Z) redoes | ✅ | M | M1 | Up to 5 steps (`undo_steps` in config.toml); word-sized steps for typing; undoing back to the saved text clears the unsaved mark |
 | V-17 | Find and replace | Ctrl+H; Enter replaces the match and goes to the next, Ctrl+A replaces all | ✅ | M | M1 | Two fields (Tab switches), jumps as you type, smart case like search |

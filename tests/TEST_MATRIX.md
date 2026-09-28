@@ -10,7 +10,7 @@ Do not edit by hand. Regenerate with `UPDATE_SNAPSHOTS=1 cargo test --test featu
 | Milestone | Features | ✅ Checked | ⏸ Pending | ❌ Missing |
 |-----------|---------:|-----------:|----------:|-----------:|
 | Dropped | 2 | 0 | 2 | 0 |
-| M1 | 52 | 52 | 0 | 0 |
+| M1 | 53 | 53 | 0 | 0 |
 | M2 | 10 | 10 | 0 | 0 |
 | M3 | 24 | 8 | 16 | 0 |
 | M5 | 2 | 1 | 1 | 0 |
@@ -153,6 +153,7 @@ Do not edit by hand. Regenerate with `UPDATE_SNAPSHOTS=1 cargo test --test featu
 | V-13 | Source mode | M1 | ✅ | [V-13-source-mode.md](fixtures/09-editing-behaviors/V-13-source-mode.md) | [keys](fixtures/09-editing-behaviors/V-13-source-mode.keys) | [expected](fixtures/09-editing-behaviors/V-13-source-mode.expected) | ✅ checked |
 | V-15 | Page Up / Page Down | M1 | ✅ | [V-15-page-up-down.md](fixtures/09-editing-behaviors/V-15-page-up-down.md) | [keys](fixtures/09-editing-behaviors/V-15-page-up-down.keys) | [expected](fixtures/09-editing-behaviors/V-15-page-up-down.expected) | ✅ checked |
 | V-16 | Search | M1 | ✅ | [V-16-search.md](fixtures/09-editing-behaviors/V-16-search.md) | [keys](fixtures/09-editing-behaviors/V-16-search.keys) | [expected](fixtures/09-editing-behaviors/V-16-search.expected) | ✅ checked |
+| V-20 | Highlight search matches | M1 | ✅ | [V-20-highlight-search-matches.md](fixtures/09-editing-behaviors/V-20-highlight-search-matches.md) | [keys](fixtures/09-editing-behaviors/V-20-highlight-search-matches.keys) | [expected](fixtures/09-editing-behaviors/V-20-highlight-search-matches.expected) | ✅ checked |
 | V-19 | Text selection | M1 | ✅ | [V-19-text-selection.md](fixtures/09-editing-behaviors/V-19-text-selection.md) | [keys](fixtures/09-editing-behaviors/V-19-text-selection.keys) | [expected](fixtures/09-editing-behaviors/V-19-text-selection.expected) | ✅ checked |
 | V-18 | Undo / redo | M1 | ✅ | [V-18-undo-redo.md](fixtures/09-editing-behaviors/V-18-undo-redo.md) | [keys](fixtures/09-editing-behaviors/V-18-undo-redo.keys) | [expected](fixtures/09-editing-behaviors/V-18-undo-redo.expected) | ✅ checked |
 | V-17 | Find and replace | M1 | ✅ | [V-17-find-and-replace.md](fixtures/09-editing-behaviors/V-17-find-and-replace.md) | [keys](fixtures/09-editing-behaviors/V-17-find-and-replace.keys) | [expected](fixtures/09-editing-behaviors/V-17-find-and-replace.expected) | ✅ checked |

@@ -1,7 +1,7 @@
 ---
 title: mdedit feature showcase
 status: every implemented feature, in one note
-version: 2.0.0
+version: 2.1.0
 ---
 # mdedit Feature Showcase
 
@@ -250,7 +250,8 @@ Move the cursor into the table to see it raw.
   folded or expanded) and back; `mdedit -t` starts in source mode.
 
 - **Page Up / Page Down** move a screen at a time.
-- **Ctrl+F** searches: the cursor jumps to the first match as you type;
+- **Ctrl+F** searches: the cursor jumps to the first match as you type,
+  and every match on screen is highlighted (the current one in red);
   ↑/↓ go to the previous/next match, Enter keeps the position, Esc goes
   back. Try searching for `needle`: here's one needle, and another NEEDLE.
 - **F3 / Shift+F3** repeat the last search (next / previous).

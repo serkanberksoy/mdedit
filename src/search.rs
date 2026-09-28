@@ -76,6 +76,24 @@ fn line_matches(line: &str, query: &str) -> impl Iterator<Item = usize> {
     (0..last).filter(move |&col| hay[col..col + needle.len()] == needle[..])
 }
 
+/// The char ranges where `query` appears in `text`, left to right and not
+/// overlapping (for highlighting matches on screen, V-20). Smart case like
+/// [`matches`].
+pub fn highlights(text: &str, query: &str) -> Vec<(usize, usize)> {
+    let len = query.chars().count();
+    let mut next = 0;
+    line_matches(text, query)
+        .filter(|&col| {
+            let free = col >= next;
+            if free {
+                next = col + len;
+            }
+            free
+        })
+        .map(|col| (col, col + len))
+        .collect()
+}
+
 /// Byte index of char column `col` in `line`.
 fn byte_at(line: &str, col: usize) -> usize {
     line.char_indices().nth(col).map_or(line.len(), |(b, _)| b)
@@ -118,16 +136,7 @@ pub fn replace_all(lines: &mut [String], query: &str, with: &str) -> usize {
     let len = query.chars().count();
     let mut count = 0;
     for line in lines.iter_mut() {
-        let mut next = 0;
-        let starts: Vec<usize> = line_matches(line, query)
-            .filter(|&col| {
-                let free = col >= next;
-                if free {
-                    next = col + len;
-                }
-                free
-            })
-            .collect();
+        let starts: Vec<usize> = highlights(line, query).iter().map(|&(a, _)| a).collect();
         // Right to left, so earlier columns stay valid.
         for &col in starts.iter().rev() {
             let (start, end) = (byte_at(line, col), byte_at(line, col + len));
@@ -220,6 +229,19 @@ mod tests {
         let mut d = doc("cat cat");
         assert_eq!(replace_all(&mut d, "cat", "catcat"), 2);
         assert_eq!(d, doc("catcat catcat"));
+    }
+
+    #[test]
+    fn highlights_are_char_ranges_that_do_not_overlap() {
+        assert_eq!(highlights("An embed, EMBEDS", "embed"), [(3, 8), (10, 15)]);
+        assert_eq!(
+            highlights("An embed, EMBEDS", "Embed"),
+            [],
+            "a capital: exact case"
+        );
+        assert_eq!(highlights("aaaa", "aa"), [(0, 2), (2, 4)]);
+        assert_eq!(highlights("é😀 x", "x"), [(3, 4)]);
+        assert_eq!(highlights("text", ""), []);
     }
 
     #[test]

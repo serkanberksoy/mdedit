@@ -5,6 +5,7 @@
 use super::*;
 use crate::images::{self, ImageLink, decoded_target, image_link};
 use crate::resolver::Resolver;
+use crate::search;
 use crate::selection::Pos;
 use crate::wrap::ImageSlot;
 
@@ -25,6 +26,9 @@ pub(super) struct Doc<'a> {
     /// The selected range (V-19): its lines are shown raw, like the cursor
     /// line, with the selected text reversed.
     selection: Option<(Pos, Pos)>,
+    /// The search being typed (V-20) and the cursor's char column: its
+    /// matches are highlighted, the one at the cursor more strongly.
+    search: Option<(&'a str, usize)>,
     options: Options,
     /// Ctrl+K fold choices by header line (`true` = collapsed).
     folds: &'a HashMap<usize, bool>,
@@ -54,6 +58,7 @@ impl<'a> Doc<'a> {
             structure,
             cursor,
             selection: None,
+            search: None,
             options,
             folds,
             highlighted,
@@ -140,6 +145,43 @@ impl<'a> Doc<'a> {
         self
     }
 
+    /// The same document with the matches of `query` highlighted (V-20);
+    /// `cursor_col` marks the current match on the cursor line.
+    pub(super) fn with_search(mut self, query: Option<&'a str>, cursor_col: usize) -> Self {
+        self.search = query.filter(|q| !q.is_empty()).map(|q| (q, cursor_col));
+        self
+    }
+
+    /// Highlights the search matches in line `i`'s view `r`, found in the
+    /// text as shown (so a heading shown in capitals, or text with its
+    /// markup hidden, still matches).
+    fn show_search(&self, i: usize, r: &mut Rendered) {
+        let Some((query, cursor_col)) = self.search else {
+            return;
+        };
+        let shown: String = r.line.spans.iter().map(|s| s.content.as_ref()).collect();
+        // The cursor line is raw: its text is the line with tabs widened.
+        let current = (self.cursor == Some(i)).then(|| self.widen(i, cursor_col));
+        for (from, to) in search::highlights(&shown, query) {
+            let style = if current == Some(from) {
+                CURRENT_MATCH
+            } else {
+                SEARCH_MATCH
+            };
+            restyle_chars(&mut r.line, from, to, |s| s.patch(style));
+        }
+    }
+
+    /// Char column `col` of line `i` in its raw view (tabs are widened).
+    fn widen(&self, i: usize, col: usize) -> usize {
+        let tabs = self.lines[i]
+            .chars()
+            .take(col)
+            .filter(|&c| c == '\t')
+            .count();
+        col + tabs * (TAB.len() - 1)
+    }
+
     /// Whether line `i` is shown raw for editing: the cursor line or a
     /// selected line.
     fn active(&self, i: usize) -> bool {
@@ -149,16 +191,13 @@ impl<'a> Doc<'a> {
     /// Reverses the selected part of line `i`'s raw view `r`.
     fn show_selection(&self, i: usize, r: &mut Rendered) {
         if let Some((from, to)) = self.selected_columns(i) {
-            // The raw view is the line with tabs widened.
-            let tabs = |col: usize| {
-                self.lines[i]
-                    .chars()
-                    .take(col)
-                    .filter(|&c| c == '\t')
-                    .count()
-            };
-            let widen = |col: usize| col + tabs(col) * (TAB.len() - 1);
-            reverse_chars(&mut r.line, widen(from), widen(to));
+            let reversed = |s: Style| s.add_modifier(Modifier::REVERSED);
+            restyle_chars(
+                &mut r.line,
+                self.widen(i, from),
+                self.widen(i, to),
+                reversed,
+            );
         }
     }
 
@@ -225,6 +264,7 @@ impl<'a> Doc<'a> {
         // Source mode (V-13): every line raw; no folds, embeds or tables.
         if self.options.source_mode {
             let mut r = render_source_with(&lines[i], &self.options);
+            self.show_search(i, &mut r);
             self.show_selection(i, &mut r);
             return wrap(&r.line, r.indent, width);
         }
@@ -238,7 +278,8 @@ impl<'a> Doc<'a> {
                 .is_none_or(|(a, b)| !touches(self.cursor, self.selection, a, b))
         {
             let t = &structure.tables[*table];
-            let r = self.view(i);
+            let mut r = self.view(i);
+            self.show_search(i, &mut r);
             let mut rows = wrap(&r.line, 0, 0);
             if *kind == TableRowKind::Header {
                 rows.pad_top_with(table_border(&t.widths, "┌", "┬", "┐"));
@@ -262,6 +303,7 @@ impl<'a> Doc<'a> {
             return rows;
         }
         let mut r = self.view(i);
+        self.show_search(i, &mut r);
         self.show_selection(i, &mut r);
         // Fold markers: a foldable callout's header ends with ▸ (folded) or
         // ▾ (B-05); a folded section or list item says how much is hidden,
@@ -369,9 +411,14 @@ fn touches(cursor: Option<usize>, selection: Option<(Pos, Pos)>, a: usize, b: us
         || selection.is_some_and(|((r0, _), (r1, _))| r0 <= b && a <= r1)
 }
 
-/// Reverses the chars `from..to` of `line` (the selection), splitting spans
-/// where needed.
-fn reverse_chars(line: &mut Line<'static>, from: usize, to: usize) {
+/// Restyles the chars `from..to` of `line` with `restyle` (the selection,
+/// search matches), splitting spans where needed.
+fn restyle_chars(
+    line: &mut Line<'static>,
+    from: usize,
+    to: usize,
+    restyle: impl Fn(Style) -> Style,
+) {
     let mut at = 0;
     let mut spans = Vec::new();
     for span in line.spans.drain(..) {
@@ -384,9 +431,8 @@ fn reverse_chars(line: &mut Line<'static>, from: usize, to: usize) {
         }
         let text: Vec<char> = span.content.chars().collect();
         let piece = |x: usize, y: usize| text[x..y].iter().collect::<String>();
-        let selected = span.style.add_modifier(Modifier::REVERSED);
         spans.push(Span::styled(piece(0, a), span.style));
-        spans.push(Span::styled(piece(a, b), selected));
+        spans.push(Span::styled(piece(a, b), restyle(span.style)));
         spans.push(Span::styled(piece(b, len), span.style));
     }
     spans.retain(|s| !s.content.is_empty());

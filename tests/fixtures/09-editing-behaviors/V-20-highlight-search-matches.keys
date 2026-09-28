@@ -1,0 +1,2 @@
+// search for "embed": every match is highlighted, the one at the cursor more strongly
+<C-f>embed

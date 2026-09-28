@@ -48,8 +48,9 @@ Keys: editing
                               steps over it; see auto_pair
 
 Keys: search
-  Ctrl+F                      Search as you type; Up/Down previous / next
-                              match, Enter stays there, Esc goes back
+  Ctrl+F                      Search as you type (all matches highlighted);
+                              Up/Down previous / next match, Enter stays
+                              there, Esc goes back
   F3 / Shift+F3               Next / previous match of the last search
   Ctrl+H (or Ctrl+R)          Find and replace: Tab switches fields, Enter
                               replaces and goes to the next, Up/Down skip,
