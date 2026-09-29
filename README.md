@@ -6,6 +6,15 @@ images. Only the line under the cursor switches to raw Markdown, so you
 edit plain text and read a rendered note, both in the terminal. Written in
 Rust with [ratatui](https://ratatui.rs).
 
+```bash
+mdedit note.md                # open (or create) a note
+mdedit "note.md#My Heading"   # open it at a heading
+mdedit --help                 # all options, keys and settings
+```
+
+Type to edit, move with the arrows. **Ctrl+S** saves, **Ctrl+X** exits,
+**Ctrl+F** searches, **Ctrl+Z** undoes.
+
 **Version:** 2.1.0 · **Stage:** Milestones 1 (core editor) and 2 (links) complete; next: M3 · [Version history](VERSION.md)
 
 ```
@@ -269,9 +278,7 @@ See [documentation/embedding.md](documentation/embedding.md).
 |-----------|-------|--------|
 | M1 | Core editor: formatting, lists, blocks, editing, files | ✅ complete (1.0.0) |
 | M2 | Links | ✅ complete (1.8.1) |
-| M3 | Embeds, metadata, math, diagrams, footnotes, comments, task types | In progress: images and task types done |
-| M4 | Emoji picker extras (skin tones, categories …) | Planned |
-| M5 | Community plugin syntax (Tasks, Dataview) | Planned |
+| M3 | Embeds, metadata, math, diagrams, footnotes, comments | In progress: images done |
 
 mdedit edits **one Markdown file at a time** and has no notion of a vault.
 Vault features (link autocomplete, vault-wide search, queries) belong to a

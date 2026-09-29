@@ -6,3 +6,6 @@
 
 # Personal notes, kept out of the repository
 /personal
+
+# Release archives (scripts: cargo build --release, then pack)
+/dist
