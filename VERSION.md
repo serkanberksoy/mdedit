@@ -1,6 +1,6 @@
 # Version history
 
-Current version: **2.1.0**
+Current version: **3.13.1**
 
 ## Versioning rules
 
@@ -28,6 +28,252 @@ Entry format: `## X.Y.Z (YYYY-MM-DD)`, followed by *Added / Changed / Fixed*
 sections that name feature IDs where there are any.
 
 ---
+
+## 3.13.1 (2026-10-01)
+
+### Fixed
+- **Tests for clicks on rendered text** (`ui::source_col`): hidden markup,
+  capital headings, bullet glyphs, aliased links, wrapped rows, wide
+  characters and clicks past the end.
+
+## 3.13.0 (2026-10-01)
+
+### Added
+- **A host's link badges and rendered spans** (`markdown::set_link_badge`,
+  `markdown::set_rendered`): a short text drawn dimmed after a wiki link
+  (how many notes link to it), and spans between a host's markers shown as
+  the host renders them (`[@doe2020]` as `Doe 2020`, in a link's color).
+  Off by default.
+
+## 3.12.0 (2026-10-01)
+
+### Added
+- **Links to missing notes are dimmed** (K-11): a wiki link whose target
+  the resolver can't find (`Resolver::exists`) is drawn in the link color,
+  dimmed: relative to the file in mdedit, through the host's resolver in a
+  vault.
+- **A click places the cursor** (`EditorView::click`): a click in the text
+  that isn't on a link puts the cursor there. On the line being edited
+  (raw) and in source mode at that column, wrapped rows too; on a
+  rendered line where the clicked text is in its source (hidden markup,
+  bullets, capitals lined up). A selection ends. It was `Ignored`, for
+  the host.
+
+## 3.11.0 (2026-10-01)
+
+### Added
+- **A host's verbatim spans** (`markdown::set_verbatim`): text between a
+  host's markers (template tags: `<% … %>`) is shown as written, markers
+  too, in the code color, and nothing in it is read as Markdown
+  (`<% "*x*" %>` stays as typed, instead of `x` in italics). Off by
+  default; the host sets it once for the thread that draws.
+
+## 3.10.1 (2026-10-01)
+
+### Fixed
+- **A saved note keeps its creation time** (F-07): an existing file is
+  written in place (after a synced temporary copy, which replaces it only
+  if that fails), so it stays the same file: its creation time (as in
+  Obsidian), hard links and permissions are kept. Before, the copy
+  replaced the file, so its creation time became the time of the last
+  save.
+
+## 3.10.0 (2026-10-01)
+
+### Added
+- **A host's code blocks in quotes and callouts** (B-03, B-08): a block
+  the host renders (a Tasks or Dataview query) inside `>` lines is
+  rendered too, after the callout's bars; the processor gets its body
+  without the `>`s. With the cursor in it, its source, as elsewhere.
+
+## 3.9.0 (2026-10-01)
+
+### Added
+- **Scrolling by rows** (`EditorView::scroll_rows`): a host's mouse wheel
+  scrolls the live preview by screen rows without moving the cursor, also
+  part way through a tall rendered block (a query's long result, an
+  image), instead of moving the cursor into the block and showing its
+  source. The next key or paste goes back to the cursor.
+
+## 3.8.1 (2026-10-01)
+
+### Fixed
+- **A host block line's own style is kept**: a line a code block processor
+  returns styled as a whole (`Line::styled`, a heading, a dim count) was
+  drawn plain; its style is now the base of its spans.
+
+## 3.8.0 (2026-10-01)
+
+### Added
+- **A host's colors** (`shared.palette`, `palette::Palette`): a theme
+  swaps the 16 named colors the editor draws with, its default text and
+  its background, like a terminal color scheme; the default changes
+  nothing.
+- **A host's embeds** (E-09 for hosts): `Resolver::embed(path, fragment)`
+  gives what `![[file#part]]` shows, for any kind of file (by default a
+  note's lines, its section or block); embeds render the host's code
+  blocks, so a host can embed what its processor draws (a base, a query).
+
+## 3.7.2 (2026-09-30)
+
+### Fixed
+- **Faster typing in long notes**: a key no longer copies the whole
+  document for the undo history (it's compared against a copy kept up to
+  date line by line, V-18), and the document's structure is worked out
+  with the cheap checks first (tables, setext headings, R-04): a key in a
+  10,000-line note takes about 1 ms, down from 2 ms.
+- **Faster search** (V-16): ASCII lines (most notes) are searched in
+  place, without copying each line into characters first; a host's vault
+  search is about 2.5 times faster.
+
+## 3.7.1 (2026-09-30)
+
+### Fixed
+- **Drawing long notes with many code blocks** (B-09): code blocks are
+  highlighted when one of their lines is drawn, not all of them on every
+  frame. A note with more blocks than the highlight cache holds (256) was
+  highlighted from scratch every frame (about 200 ms for 2000 blocks);
+  now a frame takes about a millisecond.
+
+## 3.7.0 (2026-09-30)
+
+### Added
+- **E-03 block embeds**: `![[Note#^id]]` shows the paragraph or list item
+  (with its sub-items) that ends with ` ^id`; an id on a line of its own
+  marks the block above it (a table, a quote). `[[Note#^id]]` goes to
+  the block's line. Links keep `^id` fragments (`Link::File::heading`
+  starts with `^`); `embed::block`, `embed::part`.
+
+## 3.6.1 (2026-09-30)
+
+### Fixed
+- **Smaller binaries**: `ratatui-image` no longer turns on `image`'s
+  default features (`image-defaults`), which brought in an AV1 encoder
+  (rav1e), OpenEXR and more that mdedit never uses; images keep the
+  formats mdedit lists (PNG, JPEG, GIF, WebP, BMP). A release build of
+  blackglass went from 35 MB to 29 MB.
+
+## 3.6.0 (2026-09-30)
+
+### Added
+- **P-01, P-02, P-06 typed properties**: the frontmatter reads as
+  properties: each key, then its value by type: a checkbox `☑` / `☐`, a
+  number, a date (or date and time), a list as chips (inline `[a, b]` or
+  `- item` lines), `tags` as tags, text with its links and tags styled.
+  Raw while the cursor is in it, as before.
+- **P-03 special properties** (partly): `tags` as tags, `aliases` and
+  `cssclasses` as chips.
+
+### Changed
+- `render_frontmatter_line` takes the key a list item belongs to.
+
+## 3.5.0 (2026-09-30)
+
+### Added
+- **X-04 … X-06 footnotes**: a reference `[^1]` and a definition's
+  `[^1]:` show as `[1]` in the footnote color (not superscript digits:
+  they have no ASCII fallback); an inline footnote `^[text]` as `[text]`.
+  A `[^label]:` line is no longer read as a link definition.
+- **X-07, X-08 comments**: `%%comment%%` is dimmed in italics with its
+  markers hidden; a `%%` … `%%` block is dimmed, raw as a block while the
+  cursor is in it.
+
+## 3.4.0 (2026-09-30)
+
+### Added
+- **Embedding: a margin the host fills**: `EditorView::margin` (a styled
+  line per source line) and `margin_width`: a column left of the text for
+  a host's marks (Git changes, line authors), drawn on each line's first
+  screen row; the text, the cursor and clicks move right by its width.
+
+## 3.3.0 (2026-09-30)
+
+### Added
+- **Embedding: named documents without a file**: `EditorView::name` (a
+  host's help page, a diff); `title()` and the status line use it instead
+  of "untitled" / "[no file]".
+
+## 3.2.0 (2026-09-30)
+
+### Added
+- **K-12 follow link, for hosts**: following a web link returns
+  `Outcome::OpenUrl(url)` (a host can open a browser; mdedit itself still
+  says it doesn't follow web links), and following a link to a file that
+  isn't there returns `Outcome::MissingLink { target, heading }` (a host
+  can offer to create it; the status still says it's missing).
+
+## 3.1.0 (2026-09-30)
+
+### Added
+- **V-03 indentation width**: a new setting, `indent_width = "4"` (1 to 8
+  spaces, default 2), sets how far Tab indents a list item (and what it
+  inserts elsewhere) and how far Shift+Tab outdents. List levels and their
+  indent guides follow it, so a list indented by 4 shows one guide per
+  level. `Options::indent_width`, `Editor::indent_width` (the view sets it
+  from the settings); `markdown::nesting` takes the width.
+
+## 3.0.1 (2026-09-29)
+
+### Fixed
+- **A link's click area is the link**: in view mode and for clicks, a
+  link was looked for by its text ignoring case, so a plain word with the
+  same letters before it ("charts and … [[Charts]]") got the link's
+  click area and the link itself had none. The link's own span is found
+  first now, then its exact text, and ignoring case only last (headings
+  drawn in capitals).
+
+## 3.0.0 (2026-09-29)
+
+### Added
+- **V-12 view mode**: **Alt+V** now cycles three modes: live preview → source mode → **view mode** → live preview. View
+  mode is read-only and renders every line, the cursor line too. A row
+  cursor moves over what's drawn (↑↓, PgUp / PgDn, Ctrl+Home / End),
+  including embedded notes, image frames and code block results; Tab /
+  Shift+Tab go from link to link; Enter (or Ctrl+Enter) follows the link,
+  embed or image, or gives a code block row's action to the host. Esc
+  goes back to editing; typing, pasting and editing keys change nothing.
+- **Mouse clicks on links**: `EditorView::click` follows the link (or
+  embed, image, code block result row) under a click, in view mode and in
+  the live preview (not on the line being edited, which shows raw text).
+
+### Changed
+- **Source mode is Alt+V** (the mode key), no longer Ctrl+Shift+V /
+  Ctrl+Alt+V: Ctrl+Shift+V is the terminal's paste, and pastes where the
+  terminal reports it as a key.
+
+### Changed (embedding API, hence 3.0.0)
+- `Outcome` has a new variant, `Action(String)` (a code block result row's
+  action), and is `#[non_exhaustive]`: hosts need a `_` arm.
+- `CodeBlockProcessor::render_rows` gives rows actions (the default wraps
+  `render`, so existing processors keep working).
+- `EditorView` has `reading`, `read_row`, `read_focus`, `screen_rows` and
+  `text_area`; `ui::view_rows` lists a line's rendered rows with their
+  links and actions.
+
+## 2.3.0 (2026-09-29)
+
+### Changed
+- **Ctrl+V pastes from the clipboard** (read with `wl-paste`, `xclip`,
+  `xsel` or `pbpaste`); as one undo step, and a URL pasted over a
+  selection makes a link (V-09). The terminal's own paste still works.
+- **Source mode (V-13) is Ctrl+Shift+V**, where the terminal reports it,
+  or **Ctrl+Alt+V**, which works everywhere. Konsole keeps Ctrl+Shift+V
+  for its own paste unless you unbind it.
+
+### Added
+- Embedding API: `Shared::clipboard`, a `clipboard::Clipboard` a host can
+  replace (the default is `clipboard::SystemClipboard`).
+
+## 2.2.0 (2026-09-29)
+
+### Added
+- **Code block processors** (embedding API): a host sets
+  `Shared::processor` to a `processor::CodeBlockProcessor`, which renders
+  fenced blocks of the languages it handles (like Obsidian's
+  `registerMarkdownCodeBlockProcessor`): the block's result is shown in
+  its frame, and with the cursor or a selection in the block, its source.
+  The mdedit program sets none, so every block is still shown as code.
+  Used by blackglass for plugin blocks such as ```` ```dataview ````.
 
 ## 2.1.0 (2026-09-29)
 

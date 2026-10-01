@@ -1,7 +1,10 @@
 --- rendered ---
 «┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄»{darkgray}
-«title»{cyan dim} Example
-«status»{cyan dim} active
+«tags»{cyan dim}
+  «#type/project»{lightcyan bg:rgb(25,55,100)}
+«aliases»{cyan dim}
+  «AI roadmap»{white bg:rgb(60,60,60)}
+«cssclasses»{cyan dim}
+  «wide»{white bg:rgb(60,60,60)}
 «┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄»{darkgray}
-
-«█ BODY»{magenta bold underlined}
+body

@@ -48,6 +48,12 @@ type Cache = HashMap<u64, Arc<Highlighted>>;
 
 /// A highlighted block: styled pieces for each line.
 pub type Highlighted = Vec<Vec<(Style, String)>>;
+
+#[cfg(test)]
+thread_local! {
+    /// How many blocks this thread highlighted (for tests of laziness).
+    pub static CALLS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
 const CACHE_LIMIT: usize = 256;
 
 /// [`highlight`], memoized by the language and the block's text.
@@ -73,6 +79,8 @@ pub fn highlight_cached(lang: &str, lines: &[&str]) -> Option<Arc<Highlighted>> 
 /// word like `rust` or `py`). Returns styled pieces per line, or `None` if
 /// the language is unknown, so the caller can use the plain code color.
 pub fn highlight(lang: &str, lines: &[&str]) -> Option<Highlighted> {
+    #[cfg(test)]
+    CALLS.with(|c| c.set(c.get() + 1));
     let (syntaxes, theme) = assets();
     let syntax = syntax_for(syntaxes, lang)?;
     let mut h = HighlightLines::new(syntax, theme);

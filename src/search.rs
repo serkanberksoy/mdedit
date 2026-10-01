@@ -51,13 +51,42 @@ pub fn matches(lines: &[String], query: &str) -> Vec<(usize, usize)> {
     lines
         .iter()
         .enumerate()
-        .flat_map(|(row, line)| line_matches(line, query).map(move |col| (row, col)))
+        .flat_map(|(row, line)| {
+            line_matches(line, query)
+                .into_iter()
+                .map(move |col| (row, col))
+        })
         .collect()
 }
 
 /// Char columns where `query` starts in `line` (overlapping matches too).
-fn line_matches(line: &str, query: &str) -> impl Iterator<Item = usize> {
+fn line_matches(line: &str, query: &str) -> Vec<usize> {
     let exact = query.chars().any(char::is_uppercase);
+    // ASCII (most notes): bytes are chars, compared in place.
+    if line.is_ascii() && query.is_ascii() {
+        let (hay, needle) = (line.as_bytes(), query.as_bytes());
+        if needle.is_empty() || needle.len() > hay.len() {
+            return Vec::new();
+        }
+        let same = |a: &[u8]| {
+            if exact {
+                a == needle
+            } else {
+                a.eq_ignore_ascii_case(needle)
+            }
+        };
+        let first = needle[0].to_ascii_lowercase();
+        return (0..=hay.len() - needle.len())
+            .filter(|&i| {
+                let b = hay[i];
+                (if exact {
+                    b == needle[0]
+                } else {
+                    b.to_ascii_lowercase() == first
+                }) && same(&hay[i..i + needle.len()])
+            })
+            .collect();
+    }
     // One char in, one char out, so columns match the original text.
     let fold = move |c: char| {
         if exact {
@@ -73,7 +102,9 @@ fn line_matches(line: &str, query: &str) -> impl Iterator<Item = usize> {
     } else {
         (hay.len() + 1).saturating_sub(needle.len())
     };
-    (0..last).filter(move |&col| hay[col..col + needle.len()] == needle[..])
+    (0..last)
+        .filter(|&col| hay[col..col + needle.len()] == needle[..])
+        .collect()
 }
 
 /// The char ranges where `query` appears in `text`, left to right and not
@@ -83,6 +114,7 @@ pub fn highlights(text: &str, query: &str) -> Vec<(usize, usize)> {
     let len = query.chars().count();
     let mut next = 0;
     line_matches(text, query)
+        .into_iter()
         .filter(|&col| {
             let free = col >= next;
             if free {
@@ -119,7 +151,7 @@ pub fn replace_at(
 ) -> Option<(usize, usize)> {
     let (row, col) = at;
     let line = lines.get_mut(row)?;
-    if !line_matches(line, query).any(|c| c == col) {
+    if !line_matches(line, query).contains(&col) {
         return None;
     }
     let (start, end) = (
@@ -186,6 +218,17 @@ mod tests {
             Some((1, 0)),
             "wraps"
         );
+    }
+
+    #[test]
+    fn edges_match_like_the_general_search() {
+        let d = doc("aaa\ncafÉ x\nAB ab");
+        assert_eq!(matches(&d, "aa"), [(0, 0), (0, 1)], "overlapping");
+        assert!(matches(&d, "").is_empty());
+        assert!(matches(&d, "aaaa").is_empty(), "longer than the line");
+        assert_eq!(matches(&d, "é"), [(1, 3)], "non-ASCII query, any case");
+        assert_eq!(matches(&d, "AB"), [(2, 0)], "uppercase: exact");
+        assert_eq!(matches(&d, "ab"), [(2, 0), (2, 3)]);
     }
 
     #[test]

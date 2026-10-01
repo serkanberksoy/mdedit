@@ -255,6 +255,10 @@ fn named_key(name: &str) -> Result<KeyEvent, String> {
             KeyCode::Char(n.chars().nth(2).expect("counted")),
             KeyModifiers::CONTROL,
         ),
+        n if n.starts_with("A-") && n.chars().count() == 3 => KeyEvent::new(
+            KeyCode::Char(n.chars().nth(2).expect("counted")),
+            KeyModifiers::ALT,
+        ),
         other => return Err(format!("unknown key <{other}>")),
     })
 }

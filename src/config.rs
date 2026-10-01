@@ -45,6 +45,9 @@ pub struct Config {
     /// `undo_steps = N` (V-18): how many steps Ctrl+Z can undo, 1 to
     /// 10000. 5 by default.
     pub undo_steps: usize,
+    /// `indent_width = N` (V-03): spaces Tab indents a list item (or
+    /// inserts), and per list level; 1 to 8, 2 by default.
+    pub indent_width: usize,
     /// `images = "auto" | "kitty" | "sixel" | "iterm2" | "halfblocks" |
     /// "off"` (E-04).
     pub images: Images,
@@ -67,6 +70,7 @@ impl Default for Config {
         Config {
             auto_pair: true,
             undo_steps: crate::history::History::DEFAULT_LIMIT,
+            indent_width: crate::markdown::DEFAULT_INDENT,
             images: Images::Auto,
             done_style: DoneStyle::default(),
             heading_size: HeadingSize::default(),
@@ -142,6 +146,13 @@ impl Config {
                     "config line {}: images must be \"auto\", \"kitty\", \"sixel\", \"iterm2\", \"halfblocks\" or \"off\", not {other:?}",
                     n + 1
                 )),
+                ("indent_width", value) => match value.parse::<usize>() {
+                    Ok(n @ 1..=8) => config.indent_width = n,
+                    _ => warnings.push(format!(
+                        "config line {}: indent_width must be a number from 1 to 8, not {value:?}",
+                        n + 1
+                    )),
+                },
                 ("undo_steps", value) => match value.parse::<usize>() {
                     Ok(n @ 1..=10_000) => config.undo_steps = n,
                     _ => warnings.push(format!(
@@ -201,6 +212,7 @@ impl Config {
             },
             heading_colors: self.heading_colors,
             source_mode: false,
+            indent_width: self.indent_width,
         }
     }
 }
@@ -279,6 +291,19 @@ mod tests {
         assert_eq!(c, Config::default());
         assert_eq!(warnings.len(), 3, "{warnings:?}");
         assert!(warnings[0].contains("line 1"), "{warnings:?}");
+    }
+
+    #[test]
+    fn reads_indent_width() {
+        assert_eq!(Config::default().indent_width, 2);
+        let (c, warnings) = Config::parse("indent_width = \"4\"");
+        assert_eq!((c.indent_width, warnings.len()), (4, 0));
+        for bad in ["0", "9", "tab"] {
+            let (c, warnings) = Config::parse(&format!("indent_width = \"{bad}\""));
+            assert_eq!((c.indent_width, warnings.len()), (2, 1), "{bad}");
+        }
+        let caps = Capabilities::default();
+        assert_eq!(c.options(&caps).indent_width, 4, "the renderer gets it");
     }
 
     #[test]

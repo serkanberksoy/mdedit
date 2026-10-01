@@ -17,7 +17,7 @@ use crate::blocks::QuoteCode;
 use ratatui::text::{Line, Span};
 use unicode_width::UnicodeWidthStr;
 
-mod inline;
+pub(crate) mod inline;
 mod render;
 mod table;
 
@@ -179,8 +179,11 @@ pub enum DoneStyle {
     Grey,
 }
 
+/// Spaces per list level, unless the settings say otherwise.
+pub const DEFAULT_INDENT: usize = 2;
+
 /// Rendering choices that come from the user's settings.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Options {
     pub done_style: DoneStyle,
     /// Level-1/2 headings use double-size lines (R-16).
@@ -189,22 +192,91 @@ pub struct Options {
     pub heading_colors: [Option<Color>; 6],
     /// Source mode (V-13): every line raw, nothing folded or expanded.
     pub source_mode: bool,
+    /// Spaces per list level (`indent_width`), for the indent guides.
+    pub indent_width: usize,
+}
+
+impl Default for Options {
+    fn default() -> Self {
+        Options {
+            done_style: DoneStyle::default(),
+            heading_sizes: false,
+            heading_colors: [None; 6],
+            source_mode: false,
+            indent_width: DEFAULT_INDENT,
+        }
+    }
 }
 
 pub fn is_done(state: char) -> bool {
     matches!(state, 'x' | 'X')
 }
 
-/// Nesting level of a list item: one tab or two spaces per level.
-pub fn nesting(whitespace: &str) -> usize {
+/// Nesting level of a list item: one tab or `width` spaces per level.
+pub fn nesting(whitespace: &str, width: usize) -> usize {
     let tabs = whitespace.chars().filter(|&c| c == '\t').count();
     let spaces = whitespace.chars().filter(|&c| c == ' ').count();
-    tabs + spaces / 2
+    tabs + spaces / width.max(1)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_hosts_verbatim_spans_are_shown_as_written() {
+        let text = "a <% \"*x*\" + tp.file.title %> *b* <%* y %>";
+        set_verbatim(&[("<%", "%>")]);
+        let spans = inline_spans(text, Style::default());
+        set_verbatim(&[]);
+        assert_eq!(
+            plain(&Line::from(spans.clone())),
+            "a <% \"*x*\" + tp.file.title %> b <%* y %>",
+            "nothing inside is Markdown; the rest is"
+        );
+        let tag = spans
+            .iter()
+            .find(|s| s.content.starts_with("<% "))
+            .expect("one span");
+        assert_eq!(tag.style.fg, Some(CODE));
+        let without = plain(&Line::from(inline_spans(text, Style::default())));
+        assert_eq!(
+            without, "a <% \"x\" + tp.file.title %> b <%* y %>",
+            "off again"
+        );
+    }
+
+    #[test]
+    fn a_hosts_link_badges_and_rendered_spans() {
+        use std::rc::Rc;
+        set_link_badge(Some(Rc::new(|t: &str| (t == "A").then(|| "3".to_string()))));
+        let spans = inline_spans("see [[A]] and [[B|b]]", Style::default());
+        set_link_badge(None);
+        assert_eq!(plain(&Line::from(spans.clone())), "see A 3 and b");
+        let badge = spans.iter().find(|s| s.content == " 3").expect("a badge");
+        assert_eq!(badge.style.fg, Some(Color::DarkGray));
+        assert_eq!(
+            plain(&Line::from(inline_spans("[[A]]", Style::default()))),
+            "A",
+            "off again"
+        );
+        set_rendered(vec![(
+            "[@".into(),
+            "]".into(),
+            Rc::new(|k: &str| (k == "doe").then(|| "Doe 2020".to_string())),
+        )]);
+        let spans = inline_spans("cite [@doe] and [@nope] *x*", Style::default());
+        set_rendered(Vec::new());
+        assert_eq!(
+            plain(&Line::from(spans.clone())),
+            "cite Doe 2020 and [@nope] x"
+        );
+        let shown = spans
+            .iter()
+            .find(|s| s.content == "Doe 2020")
+            .expect("rendered");
+        assert_eq!(shown.style.fg, Some(Color::LightBlue), "a link's color");
+    }
 
     fn plain(line: &Line) -> String {
         line.spans.iter().map(|s| s.content.as_ref()).collect()
@@ -392,11 +464,25 @@ mod tests {
 
     #[test]
     fn nesting_levels() {
-        assert_eq!(nesting(""), 0);
-        assert_eq!(nesting("  "), 1);
-        assert_eq!(nesting("\t"), 1);
-        assert_eq!(nesting("\t\t"), 2);
-        assert_eq!(nesting("    "), 2);
+        assert_eq!(nesting("", 2), 0);
+        assert_eq!(nesting("  ", 2), 1);
+        assert_eq!(nesting("\t", 2), 1);
+        assert_eq!(nesting("\t\t", 2), 2);
+        assert_eq!(nesting("    ", 2), 2);
+        assert_eq!(nesting("    ", 4), 1, "4-space indentation");
+        assert_eq!(Options::default().indent_width, 2);
+        // The indent guides follow it.
+        let guides = |options: &Options| {
+            plain(&render_with("    - a", options).line)
+                .matches('│')
+                .count()
+        };
+        assert_eq!(guides(&Options::default()), 2);
+        let four = Options {
+            indent_width: 4,
+            ..Options::default()
+        };
+        assert_eq!(guides(&four), 1);
     }
 
     #[test]
@@ -722,8 +808,12 @@ mod tests {
     #[test]
     fn frontmatter_render() {
         assert_eq!(
-            plain(&render_frontmatter_line("status: active")),
-            "status: active"
+            plain(&render_frontmatter_line("status: active", None)),
+            "status active"
+        );
+        assert_eq!(
+            plain(&render_frontmatter_line("  - one", Some("list"))),
+            "  one"
         );
     }
 

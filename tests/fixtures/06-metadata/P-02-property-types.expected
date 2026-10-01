@@ -1,0 +1,12 @@
+--- rendered ---
+«┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄»{darkgray}
+«text»{cyan dim} hello
+«list»{cyan dim}
+  «one»{white bg:rgb(60,60,60)}
+  «two»{white bg:rgb(60,60,60)}
+«number»{cyan dim} «42»{yellow}
+«checkbox»{cyan dim} «☑»{green}
+«date»{cyan dim} «2026-06-29»{lightmagenta}
+«datetime»{cyan dim} «2026-06-29T10:00:00»{lightmagenta}
+«┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄»{darkgray}
+body

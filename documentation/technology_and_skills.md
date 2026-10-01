@@ -40,6 +40,7 @@ src/
 ├── shared.rs        what all editors share: settings, terminal, images, emoji, resolver
 ├── view.rs          EditorView: one document (text, undo, folds, prompts); keys → Outcome
 ├── resolver.rs      Resolver trait for links / embeds / images; RelativeResolver
+├── processor.rs     CodeBlockProcessor trait: a host renders its own code blocks
 ├── app.rs           the mdedit program around one view: file browser, save prompt, exit
 ├── editor.rs        text buffer and grapheme-aware cursor (no rendering)
 ├── history.rs       undo / redo as line diffs (V-18)

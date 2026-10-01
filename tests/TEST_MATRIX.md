@@ -9,12 +9,12 @@ Do not edit by hand. Regenerate with `UPDATE_SNAPSHOTS=1 cargo test --test featu
 
 | Milestone | Features | ✅ Checked | ⏸ Pending | ❌ Missing |
 |-----------|---------:|-----------:|----------:|-----------:|
-| Dropped | 2 | 0 | 2 | 0 |
-| M1 | 53 | 53 | 0 | 0 |
-| M2 | 10 | 10 | 0 | 0 |
-| M3 | 24 | 8 | 16 | 0 |
+| Dropped | 1 | 0 | 1 | 0 |
+| M1 | 54 | 54 | 0 | 0 |
+| M2 | 11 | 11 | 0 | 0 |
+| M3 | 25 | 17 | 8 | 0 |
 | M5 | 2 | 1 | 1 | 0 |
-| Wrapper | 7 | 0 | 7 | 0 |
+| Wrapper | 5 | 0 | 5 | 0 |
 
 ## 1. Text formatting
 
@@ -64,7 +64,7 @@ Do not edit by hand. Regenerate with `UPDATE_SNAPSHOTS=1 cargo test --test featu
 | K-08 | Autolink | M2 | ✅ | [K-08-autolink.md](fixtures/03-links/K-08-autolink.md) | — | [expected](fixtures/03-links/K-08-autolink.expected) | ✅ checked |
 | K-09 | Bare URL | M2 | ✅ | [K-09-bare-url.md](fixtures/03-links/K-09-bare-url.md) | — | [expected](fixtures/03-links/K-09-bare-url.expected) | ✅ checked |
 | K-10 | Obsidian URI | Dropped | ⬜ | [K-10-obsidian-uri.md](fixtures/03-links/K-10-obsidian-uri.md) | — | — | ⏸ pending |
-| K-11 | Unresolved link styling | Wrapper | ⬜ | [K-11-unresolved-link.md](fixtures/03-links/K-11-unresolved-link.md) | — | — | ⏸ pending |
+| K-11 | Unresolved link styling | M2 | ✅ | [K-11-unresolved-link.md](fixtures/03-links/K-11-unresolved-link.md) | — | [expected](fixtures/03-links/K-11-unresolved-link.expected) | ✅ checked |
 | K-12 | Follow link | M2 | ✅ | [K-12-follow-link.md](fixtures/03-links/K-12-follow-link.md) | — | [expected](fixtures/03-links/K-12-follow-link.expected) | ✅ checked |
 | K-13 | Link autocomplete | Wrapper | ⬜ | [K-13-link-autocomplete.md](fixtures/03-links/K-13-link-autocomplete.md) | — | — | ⏸ pending |
 
@@ -74,7 +74,7 @@ Do not edit by hand. Regenerate with `UPDATE_SNAPSHOTS=1 cargo test --test featu
 |----|---------|-----------|-----|---------|------|----------|------|
 | E-01 | Embed note | M3 | ✅ | [E-01-embed-note.md](fixtures/04-embeds/E-01-embed-note.md) | — | [expected](fixtures/04-embeds/E-01-embed-note.expected) | ✅ checked |
 | E-02 | Embed heading section | M3 | ✅ | [E-02-embed-heading.md](fixtures/04-embeds/E-02-embed-heading.md) | — | [expected](fixtures/04-embeds/E-02-embed-heading.expected) | ✅ checked |
-| E-03 | Embed block | Wrapper | ⬜ | [E-03-embed-block.md](fixtures/04-embeds/E-03-embed-block.md) | — | — | ⏸ pending |
+| E-03 | Embed block | M3 | ✅ | [E-03-embed-block.md](fixtures/04-embeds/E-03-embed-block.md) | — | [expected](fixtures/04-embeds/E-03-embed-block.expected) | ✅ checked |
 | E-04 | Embed image | M3 | ✅ | [E-04-embed-image.md](fixtures/04-embeds/E-04-embed-image.md) | — | [expected](fixtures/04-embeds/E-04-embed-image.expected) | ✅ checked |
 | E-05 | Image size | M3 | ✅ | [E-05-image-size.md](fixtures/04-embeds/E-05-image-size.md) | — | [expected](fixtures/04-embeds/E-05-image-size.expected) | ✅ checked |
 | E-06 | Embed audio / video | M3 | ⬜ | [E-06-embed-audio-video.md](fixtures/04-embeds/E-06-embed-audio-video.md) | — | — | ⏸ pending |
@@ -104,12 +104,12 @@ Do not edit by hand. Regenerate with `UPDATE_SNAPSHOTS=1 cargo test --test featu
 
 | ID | Feature | Milestone | Now | Fixture | Keys | Snapshot | Test |
 |----|---------|-----------|-----|---------|------|----------|------|
-| P-01 | Frontmatter / properties | M3 | 🟡 | [P-01-frontmatter.md](fixtures/06-metadata/P-01-frontmatter.md) | — | [expected](fixtures/06-metadata/P-01-frontmatter.expected) | ✅ checked |
-| P-02 | Property types | M3 | ⬜ | [P-02-property-types.md](fixtures/06-metadata/P-02-property-types.md) | — | — | ⏸ pending |
-| P-03 | Special properties | M3 | ⬜ | [P-03-special-properties.md](fixtures/06-metadata/P-03-special-properties.md) | — | — | ⏸ pending |
+| P-01 | Frontmatter / properties | M3 | ✅ | [P-01-frontmatter.md](fixtures/06-metadata/P-01-frontmatter.md) | — | [expected](fixtures/06-metadata/P-01-frontmatter.expected) | ✅ checked |
+| P-02 | Property types | M3 | ✅ | [P-02-property-types.md](fixtures/06-metadata/P-02-property-types.md) | — | [expected](fixtures/06-metadata/P-02-property-types.expected) | ✅ checked |
+| P-03 | Special properties | M3 | 🟡 | [P-03-special-properties.md](fixtures/06-metadata/P-03-special-properties.md) | — | [expected](fixtures/06-metadata/P-03-special-properties.expected) | ✅ checked |
 | P-04 | Collapse properties | M3 | ⬜ | [P-04-collapse-properties.md](fixtures/06-metadata/P-04-collapse-properties.md) | — | — | ⏸ pending |
 | P-05 | Inline tags | M3 | ✅ | [P-05-inline-tags.md](fixtures/06-metadata/P-05-inline-tags.md) | — | [expected](fixtures/06-metadata/P-05-inline-tags.expected) | ✅ checked |
-| P-06 | Tags in frontmatter | M3 | ⬜ | [P-06-frontmatter-tags.md](fixtures/06-metadata/P-06-frontmatter-tags.md) | — | — | ⏸ pending |
+| P-06 | Tags in frontmatter | M3 | ✅ | [P-06-frontmatter-tags.md](fixtures/06-metadata/P-06-frontmatter-tags.md) | — | [expected](fixtures/06-metadata/P-06-frontmatter-tags.expected) | ✅ checked |
 
 ## 7. Math, diagrams, footnotes, comments, HTML
 
@@ -118,11 +118,11 @@ Do not edit by hand. Regenerate with `UPDATE_SNAPSHOTS=1 cargo test --test featu
 | X-01 | Inline math | M3 | ⬜ | [X-01-inline-math.md](fixtures/07-math-diagrams-footnotes-comments-html/X-01-inline-math.md) | — | — | ⏸ pending |
 | X-02 | Block math | M3 | ⬜ | [X-02-block-math.md](fixtures/07-math-diagrams-footnotes-comments-html/X-02-block-math.md) | — | — | ⏸ pending |
 | X-03 | Mermaid diagrams | M3 | ⬜ | [X-03-mermaid.md](fixtures/07-math-diagrams-footnotes-comments-html/X-03-mermaid.md) | — | — | ⏸ pending |
-| X-04 | Footnote reference | M3 | ⬜ | [X-04-footnote-reference.md](fixtures/07-math-diagrams-footnotes-comments-html/X-04-footnote-reference.md) | — | — | ⏸ pending |
-| X-05 | Footnote definition | M3 | ⬜ | [X-05-footnote-definition.md](fixtures/07-math-diagrams-footnotes-comments-html/X-05-footnote-definition.md) | — | — | ⏸ pending |
-| X-06 | Inline footnote | M3 | ⬜ | [X-06-inline-footnote.md](fixtures/07-math-diagrams-footnotes-comments-html/X-06-inline-footnote.md) | — | — | ⏸ pending |
-| X-07 | Comment (inline) | M3 | ⬜ | [X-07-inline-comment.md](fixtures/07-math-diagrams-footnotes-comments-html/X-07-inline-comment.md) | — | — | ⏸ pending |
-| X-08 | Comment (block) | M3 | ⬜ | [X-08-block-comment.md](fixtures/07-math-diagrams-footnotes-comments-html/X-08-block-comment.md) | — | — | ⏸ pending |
+| X-04 | Footnote reference | M3 | ✅ | [X-04-footnote-reference.md](fixtures/07-math-diagrams-footnotes-comments-html/X-04-footnote-reference.md) | — | [expected](fixtures/07-math-diagrams-footnotes-comments-html/X-04-footnote-reference.expected) | ✅ checked |
+| X-05 | Footnote definition | M3 | ✅ | [X-05-footnote-definition.md](fixtures/07-math-diagrams-footnotes-comments-html/X-05-footnote-definition.md) | — | [expected](fixtures/07-math-diagrams-footnotes-comments-html/X-05-footnote-definition.expected) | ✅ checked |
+| X-06 | Inline footnote | M3 | ✅ | [X-06-inline-footnote.md](fixtures/07-math-diagrams-footnotes-comments-html/X-06-inline-footnote.md) | — | [expected](fixtures/07-math-diagrams-footnotes-comments-html/X-06-inline-footnote.expected) | ✅ checked |
+| X-07 | Comment (inline) | M3 | ✅ | [X-07-inline-comment.md](fixtures/07-math-diagrams-footnotes-comments-html/X-07-inline-comment.md) | — | [expected](fixtures/07-math-diagrams-footnotes-comments-html/X-07-inline-comment.expected) | ✅ checked |
+| X-08 | Comment (block) | M3 | ✅ | [X-08-block-comment.md](fixtures/07-math-diagrams-footnotes-comments-html/X-08-block-comment.md) | — | [expected](fixtures/07-math-diagrams-footnotes-comments-html/X-08-block-comment.expected) | ✅ checked |
 | X-09 | Inline HTML | M3 | ⬜ | [X-09-inline-html.md](fixtures/07-math-diagrams-footnotes-comments-html/X-09-inline-html.md) | — | — | ⏸ pending |
 | X-10 | Block HTML | M3 | ⬜ | [X-10-block-html.md](fixtures/07-math-diagrams-footnotes-comments-html/X-10-block-html.md) | — | — | ⏸ pending |
 
@@ -149,7 +149,7 @@ Do not edit by hand. Regenerate with `UPDATE_SNAPSHOTS=1 cargo test --test featu
 | V-09 | Paste URL over selection | M1 | ✅ | [V-09-paste-url-over-selection.md](fixtures/09-editing-behaviors/V-09-paste-url-over-selection.md) | [keys](fixtures/09-editing-behaviors/V-09-paste-url-over-selection.keys) | [expected](fixtures/09-editing-behaviors/V-09-paste-url-over-selection.expected) | ✅ checked |
 | V-10 | Tag / property autocomplete | Wrapper | ⬜ | [V-10-tag-property-autocomplete.md](fixtures/09-editing-behaviors/V-10-tag-property-autocomplete.md) | — | — | ⏸ pending |
 | V-11 | Toggle checkbox | M1 | ✅ | [V-11-toggle-checkbox.md](fixtures/09-editing-behaviors/V-11-toggle-checkbox.md) | [keys](fixtures/09-editing-behaviors/V-11-toggle-checkbox.keys) | [expected](fixtures/09-editing-behaviors/V-11-toggle-checkbox.expected) | ✅ checked |
-| V-12 | Reading view | Dropped | ⬜ | [V-12-reading-view.md](fixtures/09-editing-behaviors/V-12-reading-view.md) | — | — | ⏸ pending |
+| V-12 | Reading view | M1 | ✅ | [V-12-reading-view.md](fixtures/09-editing-behaviors/V-12-reading-view.md) | [keys](fixtures/09-editing-behaviors/V-12-reading-view.keys) | [expected](fixtures/09-editing-behaviors/V-12-reading-view.expected) | ✅ checked |
 | V-13 | Source mode | M1 | ✅ | [V-13-source-mode.md](fixtures/09-editing-behaviors/V-13-source-mode.md) | [keys](fixtures/09-editing-behaviors/V-13-source-mode.keys) | [expected](fixtures/09-editing-behaviors/V-13-source-mode.expected) | ✅ checked |
 | V-15 | Page Up / Page Down | M1 | ✅ | [V-15-page-up-down.md](fixtures/09-editing-behaviors/V-15-page-up-down.md) | [keys](fixtures/09-editing-behaviors/V-15-page-up-down.keys) | [expected](fixtures/09-editing-behaviors/V-15-page-up-down.expected) | ✅ checked |
 | V-16 | Search | M1 | ✅ | [V-16-search.md](fixtures/09-editing-behaviors/V-16-search.md) | [keys](fixtures/09-editing-behaviors/V-16-search.keys) | [expected](fixtures/09-editing-behaviors/V-16-search.expected) | ✅ checked |

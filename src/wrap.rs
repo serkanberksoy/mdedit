@@ -39,6 +39,9 @@ pub struct Wrapped {
     pub attrs: Vec<LineAttr>,
     /// Where an embedded image's pixels go (E-04), drawn over these rows.
     pub image: Option<ImageSlot>,
+    /// A code block processor's action for each row (view mode); empty
+    /// when there are none.
+    pub actions: Vec<Option<String>>,
 }
 
 /// The part of a line's rows that an image covers.
@@ -160,6 +163,7 @@ pub fn wrap(line: &Line<'static>, indent: usize, width: usize) -> Wrapped {
         indent,
         top: 0,
         image: None,
+        actions: Vec::new(),
     }
 }
 
@@ -174,6 +178,7 @@ impl Wrapped {
             top: 0,
             attrs: Vec::new(),
             image: None,
+            actions: Vec::new(),
         }
     }
 

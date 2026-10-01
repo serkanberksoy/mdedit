@@ -163,8 +163,9 @@ other notes and files, note properties, and technical notation.
   `ratatui-image` with kitty, sixel, iTerm2 or half blocks, chosen by
   asking the terminal, or by `images = …` in `config.toml`); ⬜ audio/video
   and PDF (placeholders). Embedding other
-  notes and sections by relative path (E-01, E-02) are done (0.42.0);
-  block embeds (E-03) and queries (E-08, E-09) are in the wrapper project.
+  notes and sections by relative path (E-01, E-02) are done (0.42.0), and
+  ✅ blocks (E-03, 3.7.0: `![[Note#^id]]`, found by the host's resolver);
+  queries (E-08, E-09) are in the wrapper project.
 - **Metadata (P-01 … P-06):** ✅ P-05 inline tags · 🟡 P-01 frontmatter · ⬜
   property types, special properties, collapsing properties, tags in
   frontmatter. Related: R-05, R-12.
@@ -209,9 +210,6 @@ project will wrap mdedit, add the vault features, and use mdedit as its
 editor in multiple tabs. These feature rows have the milestone **Wrapper**:
 
 - K-11 unresolved-link styling · K-13 `[[` link autocomplete
-- E-03 embedding another note's block (E-01 / E-02, notes and sections by
-  relative path, are in mdedit since 0.42.0; the wrapper can add
-  vault-wide lookup)
 - E-08 search query embeds · E-09 Bases
 - V-10 tag / property autocomplete
 - C-02 Tasks query blocks (and Dataview queries, C-03)
@@ -242,6 +240,9 @@ own binary is one such host.
   whole terminal row), the host creates the image picker once, and config
   loading stays in the binary.
 - A host must use the same ratatui major version as mdedit (0.30).
+- ✅ **View mode and clicks** (3.0.0): V-12 view mode (read-only, row cursor, Tab / Enter / click follow links), `EditorView::click`, code block rows with actions (`render_rows`, `Outcome::Action`); `Outcome` is non-exhaustive.
+- ✅ **Code block processors** (2.2.0): `Shared::processor` renders a
+  host's fenced blocks (e.g. blackglass's Dataview plugin).
 - The mdedit binary (`main.rs`) is rebuilt on this API, so the existing
   tests keep guarding its behavior.
 

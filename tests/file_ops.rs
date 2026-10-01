@@ -824,6 +824,35 @@ fn f07_permissions_and_symlinks_are_kept() {
 
 #[cfg(unix)]
 #[test]
+fn f07_a_saved_file_keeps_its_creation_time() {
+    use std::os::unix::fs::MetadataExt;
+    let d = tmp("f07_same_file");
+    let a = d.join("a.md");
+    fs::write(&a, "x\n").unwrap();
+    let hard = d.join("hard.md");
+    fs::hard_link(&a, &hard).unwrap();
+    let before = fs::metadata(&a).unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(20));
+    edit_and_save(&a);
+    let after = fs::metadata(&a).unwrap();
+    // The same file (written in place), so its creation time stays, as in
+    // Obsidian; a hard link sees the change.
+    assert_eq!(after.ino(), before.ino(), "the same file");
+    if let (Ok(c0), Ok(c1)) = (before.created(), after.created()) {
+        assert_eq!(c0, c1, "the creation time is kept");
+    }
+    assert!(after.modified().unwrap() > before.modified().unwrap());
+    assert_eq!(read(&hard), "!x\n");
+    let names: Vec<_> = fs::read_dir(&d)
+        .unwrap()
+        .flatten()
+        .map(|e| e.file_name())
+        .collect();
+    assert_eq!(names.len(), 2, "no temporary file left: {names:?}");
+}
+
+#[cfg(unix)]
+#[test]
 fn f07_a_failed_save_leaves_the_old_file() {
     use std::os::unix::fs::PermissionsExt;
     let d = tmp("f07_fail");
@@ -837,4 +866,13 @@ fn f07_a_failed_save_leaves_the_old_file() {
     fs::set_permissions(&d, fs::Permissions::from_mode(0o700)).unwrap();
     assert!(app.view.editor.dirty);
     assert_eq!(read(&a), "old\n");
+}
+
+#[test]
+fn e03_a_block_link_goes_to_its_line() {
+    let mut app = App::new("# A\ntext\n\nthe block ^b1\n", None);
+    assert!(app.go_to_heading("^b1"));
+    assert_eq!(app.view.editor.row, 3);
+    assert!(!app.go_to_heading("^zz"));
+    assert!(app.view.status.contains("^zz"), "{}", app.view.status);
 }

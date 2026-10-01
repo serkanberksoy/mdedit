@@ -23,6 +23,90 @@ const DELIMITERS: &[(&str, Style)] = &[
     ("==", Style::new().fg(Color::Black).bg(Color::Yellow)),
 ];
 
+thread_local! {
+    /// The host's verbatim spans ([`set_verbatim`]).
+    static VERBATIM: std::cell::RefCell<std::rc::Rc<Vec<(String, String)>>> =
+        std::cell::RefCell::default();
+}
+
+/// Text from `open` to `close` (each pair) is shown as written, markers
+/// too, in the code color: nothing in it is Markdown. For a host whose
+/// notes have their own syntax (template tags: `("<%", "%>")`). For the
+/// thread that draws; empty (the default) turns it off.
+pub fn set_verbatim(pairs: &[(&str, &str)]) {
+    let pairs = pairs
+        .iter()
+        .filter(|(open, close)| !open.is_empty() && !close.is_empty())
+        .map(|(open, close)| (open.to_string(), close.to_string()))
+        .collect();
+    VERBATIM.with(|v| *v.borrow_mut() = std::rc::Rc::new(pairs));
+}
+
+thread_local! {
+    /// The `[[targets]]` of the line being drawn that point nowhere
+    /// ([`with_missing`]).
+    static MISSING: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// Runs `f` (drawing a line) with wiki links to `missing` targets (as
+/// written: `Note`, `Note#Heading`) dimmed (K-11).
+pub fn with_missing<T>(missing: Vec<String>, f: impl FnOnce() -> T) -> T {
+    let before = MISSING.with(|m| std::mem::replace(&mut *m.borrow_mut(), missing));
+    let out = f();
+    MISSING.with(|m| *m.borrow_mut() = before);
+    out
+}
+
+/// A host's function from a link's target (or a span's text) to what's
+/// shown ([`set_link_badge`], [`set_rendered`]).
+pub type HostText = std::rc::Rc<dyn Fn(&str) -> Option<String>>;
+
+thread_local! {
+    /// The host's link badges ([`set_link_badge`]).
+    static BADGE: std::cell::RefCell<Option<HostText>> = const { std::cell::RefCell::new(None) };
+    /// The host's rendered spans ([`set_rendered`]).
+    static RENDERED: std::cell::RefCell<std::rc::Rc<Vec<(String, String, HostText)>>> =
+        std::cell::RefCell::default();
+}
+
+/// A short text the host shows dimmed after a wiki link (`3`: how many
+/// notes link to it), from the link's target (`Note`, `Note#Heading`);
+/// `None` shows nothing. For the thread that draws; `None` turns it off.
+pub fn set_link_badge(badge: Option<HostText>) {
+    BADGE.with(|b| *b.borrow_mut() = badge);
+}
+
+/// Spans the host shows its own way: from each `open` to its `close`
+/// (`[@` … `]`: a citation), what `render` gives for the text between
+/// (`Doe 2020`), in a link's color; `None` leaves the span as written.
+/// For the thread that draws; empty turns it off.
+pub fn set_rendered(spans: Vec<(String, String, HostText)>) {
+    let spans = spans
+        .into_iter()
+        .filter(|(open, close, _)| !open.is_empty() && !close.is_empty())
+        .collect();
+    RENDERED.with(|r| *r.borrow_mut() = std::rc::Rc::new(spans));
+}
+
+/// What a rendered span `rest` starts with shows, and its length.
+fn rendered(rest: &str, spans: &[(String, String, HostText)]) -> Option<(usize, String)> {
+    spans.iter().find_map(|(open, close, render)| {
+        let inner = rest.strip_prefix(open.as_str())?;
+        let end = inner.find(close.as_str())?;
+        let shown = render(&inner[..end])?;
+        Some((open.len() + end + close.len(), shown))
+    })
+}
+
+/// The length of the verbatim span `rest` starts with, if it does.
+fn verbatim_len(rest: &str, pairs: &[(String, String)]) -> Option<usize> {
+    pairs.iter().find_map(|(open, close)| {
+        let inner = rest.strip_prefix(open.as_str())?;
+        let end = inner.find(close.as_str())?;
+        Some(open.len() + end + close.len())
+    })
+}
+
 /// Parses inline markup in `text`, returning styled spans with the syntax
 /// hidden. `base` is patched with each token's style; markup nests
 /// (`~~a **b** c~~`).
@@ -47,10 +131,36 @@ fn parse_inline(text: &str, base: Style, out: &mut Vec<Span<'static>>) {
             out.push(Span::styled(std::mem::take(plain), base));
         }
     };
+    let verbatim = VERBATIM.with(|v| std::rc::Rc::clone(&v.borrow()));
+    let spans = RENDERED.with(|r| std::rc::Rc::clone(&r.borrow()));
+    let badge = BADGE.with(|b| b.borrow().clone());
     let mut i = 0;
     while i < text.len() {
         let rest = &text[i..];
         let prev = text[..i].chars().next_back();
+
+        // A host's rendered span (`[@key]` as `Doe 2020`).
+        if !spans.is_empty()
+            && let Some((n, shown)) = rendered(rest, &spans)
+        {
+            flush(&mut plain, out);
+            out.push(Span::styled(shown, base.patch(link)));
+            i += n;
+            continue;
+        }
+
+        // A host's verbatim span (`<% … %>`): as written.
+        if !verbatim.is_empty()
+            && let Some(n) = verbatim_len(rest, &verbatim)
+        {
+            flush(&mut plain, out);
+            out.push(Span::styled(
+                rest[..n].to_string(),
+                base.patch(Style::new().fg(CODE)),
+            ));
+            i += n;
+            continue;
+        }
 
         // Backslash escape: `\*` is a literal `*` (ASCII punctuation only).
         if let Some(c) = rest
@@ -100,6 +210,51 @@ fn parse_inline(text: &str, base: Style, out: &mut Vec<Span<'static>>) {
             continue;
         }
 
+        // Comment `%%…%%` (X-07): dimmed, the markers hidden.
+        if let Some(inner) = rest.strip_prefix("%%")
+            && let Some(end) = inner.find("%%")
+        {
+            flush(&mut plain, out);
+            let dim = Style::new()
+                .fg(Color::DarkGray)
+                .add_modifier(Modifier::ITALIC);
+            out.push(Span::styled(inner[..end].to_string(), base.patch(dim)));
+            i += 2 + end + 2;
+            continue;
+        }
+
+        // Footnotes (X-04 … X-06): a reference `[^label]` (a definition's
+        // `[^label]:` at the line start) as `[label]`; an inline footnote
+        // `^[text]` as `[text]`.
+        let note = Style::new().fg(Color::Cyan);
+        if let Some(inner) = rest.strip_prefix("[^")
+            && let Some(end) = inner.find(']')
+            && !inner[..end].is_empty()
+            && !inner[..end].contains(char::is_whitespace)
+        {
+            flush(&mut plain, out);
+            out.push(Span::styled(
+                format!("[{}]", &inner[..end]),
+                base.patch(note),
+            ));
+            i += 2 + end + 1;
+            if i == 2 + end + 1 && text[i..].starts_with(':') {
+                i += 1; // the definition's colon
+            }
+            continue;
+        }
+        if let Some(inner) = rest.strip_prefix("^[")
+            && let Some(end) = inner.find(']')
+        {
+            flush(&mut plain, out);
+            out.push(Span::styled(
+                format!("[{}]", &inner[..end]),
+                base.patch(note),
+            ));
+            i += 2 + end + 1;
+            continue;
+        }
+
         // Markdown link `[text](target)` (K-06): the text, parsed for
         // markup, in the link style; an inline image `![alt](…)` as `🖼 alt`.
         if !rest.starts_with("[[")
@@ -131,6 +286,8 @@ fn parse_inline(text: &str, base: Style, out: &mut Vec<Span<'static>>) {
         }
 
         // Atomic tokens: shown with their own style, content not re-parsed.
+        // A wiki link's badge from the host, after it.
+        let mut after = None;
         let token: Option<(usize, String, Style)> = if rest.starts_with("![[") {
             // An embed shown inline (not expanded): a marker and the name.
             rest.find("]]").map(|end| {
@@ -138,8 +295,19 @@ fn parse_inline(text: &str, base: Style, out: &mut Vec<Span<'static>>) {
                 (end + 2, format!("⧉ {shown}"), link)
             })
         } else if rest.starts_with("[[") {
-            rest.find("]]")
-                .map(|end| (end + 2, link_text(&rest[2..end]), link))
+            rest.find("]]").map(|end| {
+                let inner = &rest[2..end];
+                let target = inner.split('|').next().unwrap_or_default();
+                let target = target.trim_end_matches('\\').trim();
+                let missing = MISSING.with(|m| m.borrow().iter().any(|t| t == target));
+                let style = if missing {
+                    link.add_modifier(Modifier::DIM)
+                } else {
+                    link
+                };
+                after = badge.as_ref().and_then(|b| b(target));
+                (end + 2, link_text(inner), style)
+            })
         } else if let Some(address) = autolink(rest) {
             // `<https://…>` / `<me@example.com>` (K-08): without the brackets.
             Some((address.len() + 2, address.to_string(), url))
@@ -167,6 +335,10 @@ fn parse_inline(text: &str, base: Style, out: &mut Vec<Span<'static>>) {
         if let Some((len, shown, style)) = token {
             flush(&mut plain, out);
             out.push(Span::styled(shown, base.patch(style)));
+            if let Some(b) = after {
+                let dim = Style::new().fg(Color::DarkGray);
+                out.push(Span::styled(format!(" {b}"), base.patch(dim)));
+            }
             i += len;
             continue;
         }
@@ -189,7 +361,7 @@ fn parse_inline(text: &str, base: Style, out: &mut Vec<Span<'static>>) {
 /// What a wiki link `[[inner]]` shows: its alias, or the note and heading
 /// as `Note › Heading` (K-03, K-04); a heading in the same note
 /// (`[[#Heading]]`) is just `Heading`.
-fn link_text(inner: &str) -> String {
+pub(crate) fn link_text(inner: &str) -> String {
     if let Some((_, alias)) = inner.split_once('|') {
         return alias.to_string();
     }

@@ -13,8 +13,8 @@ FILE#Heading opens at that heading. A FILE that doesn't exist yet is created
 when you save.
 
 Options:
-  -t, --source                Start in source mode (every line raw); Ctrl+V
-                              switches to the live preview
+  -t, --source                Start in source mode (every line raw);
+                              Alt+V switches to view mode
   --big-headings              Same as --heading-size=on
   --heading-size=auto|on|off  Double-size level-1/2 headings (Konsole, xterm,
                               WezTerm); default: off, or heading_size
@@ -34,6 +34,9 @@ Keys: editing
                               task type), ends the list on an empty item
   Tab / Shift+Tab             Nest / un-nest list items (all selected lines)
   Backspace / Delete          Delete (the selection, or an empty pair)
+  Ctrl+V                      Paste from the clipboard (wl-paste, xclip,
+                              xsel or pbpaste); the terminal's own paste
+                              works too
   Ctrl+T                      Turn the line into a task
   Ctrl+L                      Close the task, or reopen a closed one
   Ctrl+Z / Ctrl+Y             Undo / redo (Ctrl+Shift+Z also redoes); typing
@@ -57,7 +60,13 @@ Keys: search
                               Ctrl+A replaces all, Esc closes
 
 Keys: view, links and files
-  Ctrl+V                      Source mode on / off
+  Alt+V                       Cycle the modes: live preview, source mode
+                              (every line raw), view mode (read-only,
+                              every line rendered)
+  View mode keys              Up/Down/PgUp/PgDn move over rendered rows,
+                              Tab / Shift+Tab go to the next / previous
+                              link, Enter (or a click) follows it, Esc
+                              edits again; typing changes nothing
   Ctrl+K                      Fold / unfold a section, list item or callout
   Ctrl+Enter or Alt+Enter     Follow the link under the cursor ([[Note]],
                               [[#Heading]], [text](file.md))
@@ -72,6 +81,8 @@ Settings, one key = \"value\" per line in ~/.config/mdedit/config.toml
   auto_pair = on | off                Auto-pair brackets and ** == ~~
                                       (default: on)
   undo_steps = 1 to 10000             Steps Ctrl+Z can undo (default: 5)
+  indent_width = 1 to 8               Spaces Tab indents a list item, and
+                                      per list level (default: 2)
   images = auto | kitty | sixel | iterm2 | halfblocks | off
                                       How images are drawn (default: auto,
                                       asks the terminal)

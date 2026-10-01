@@ -93,7 +93,16 @@ impl App {
     /// can do.
     fn act_on(&mut self, outcome: Outcome) -> Action {
         match outcome {
-            Outcome::Consumed | Outcome::Ignored => Action::Continue,
+            Outcome::Consumed
+            | Outcome::Ignored
+            | Outcome::Action(_)
+            | Outcome::MissingLink { .. } => Action::Continue,
+            // A terminal editor doesn't open a browser.
+            Outcome::OpenUrl(url) => {
+                self.view.status =
+                    format!("Not following web link {url}: mdedit opens Markdown files");
+                Action::Continue
+            }
             Outcome::RequestClose if !self.view.is_dirty() => Action::Quit,
             Outcome::RequestClose => {
                 self.mode = Mode::SavePrompt { then: After::Quit };
@@ -719,19 +728,69 @@ mod tests {
         assert_eq!(app.view.folds.get(&0), Some(&false));
     }
 
+    /// A clipboard with fixed text (or none), for tests.
+    struct Fixed(Option<&'static str>);
+
+    impl crate::clipboard::Clipboard for Fixed {
+        fn read(&self) -> Option<String> {
+            self.0.map(str::to_string)
+        }
+    }
+
     #[test]
-    fn ctrl_v_toggles_source_mode() {
+    fn alt_v_cycles_live_source_and_view() {
         let mut app = App::new("# T\ntext", None);
-        app.handle_key(key(KeyCode::Char('v'), KeyModifiers::CONTROL));
-        assert!(app.view.source_mode);
+        let alt_v = |c| key(KeyCode::Char(c), KeyModifiers::ALT);
+        app.handle_key(alt_v('v'));
+        assert!(app.view.source_mode && !app.view.reading);
         assert!(
             app.view.status.contains("Source"),
             "status: {}",
             app.view.status
         );
-        app.handle_key(key(KeyCode::Char('v'), KeyModifiers::CONTROL));
-        assert!(!app.view.source_mode);
+        app.handle_key(alt_v('v'));
+        assert!(app.view.reading && !app.view.source_mode, "view mode");
+        assert!(
+            app.view.status.contains("View"),
+            "status: {}",
+            app.view.status
+        );
+        app.handle_key(alt_v('V'));
+        assert!(
+            !app.view.reading && !app.view.source_mode,
+            "back to the live preview"
+        );
         assert!(!app.view.editor.dirty, "no text is typed");
+    }
+
+    #[test]
+    fn ctrl_shift_v_pastes_where_the_terminal_reports_it() {
+        let mut app = App::new("ab", None);
+        app.shared.clipboard = Box::new(Fixed(Some("X")));
+        let shift = KeyModifiers::CONTROL | KeyModifiers::SHIFT;
+        app.handle_key(key(KeyCode::Char('V'), shift));
+        assert_eq!(app.view.editor.lines, ["Xab"]);
+        assert!(!app.view.source_mode);
+    }
+
+    #[test]
+    fn ctrl_v_pastes_the_clipboard() {
+        let mut app = App::new("ab", None);
+        app.shared.clipboard = Box::new(Fixed(Some("X\nY")));
+        app.view.editor.col = 1;
+        app.handle_key(key(KeyCode::Char('v'), KeyModifiers::CONTROL));
+        assert_eq!(app.view.editor.lines, ["aX", "Yb"]);
+        assert!(!app.view.source_mode, "Ctrl+V is paste now");
+        app.handle_key(key(KeyCode::Char('z'), KeyModifiers::CONTROL));
+        assert_eq!(app.view.editor.lines, ["ab"], "one undo step");
+        app.shared.clipboard = Box::new(Fixed(None));
+        app.handle_key(key(KeyCode::Char('v'), KeyModifiers::CONTROL));
+        assert_eq!(app.view.editor.lines, ["ab"]);
+        assert!(
+            app.view.status.contains("clipboard"),
+            "status: {}",
+            app.view.status
+        );
     }
 
     #[test]
@@ -844,6 +903,26 @@ mod tests {
             ["one two three"],
             "Ctrl+Shift+Z redoes too"
         );
+    }
+
+    #[test]
+    fn undo_is_right_after_the_host_changes_the_text() {
+        // A host may set the lines between keys (a reload): undo goes back
+        // to what it set, not to an older text.
+        let mut app = App::new("one\ntwo\nthree", None);
+        press(&mut app, KeyCode::Char('a'));
+        app.view.editor.lines = vec!["new".into(), "text".into()];
+        app.view.editor.row = 1;
+        app.view.editor.col = 4;
+        press(&mut app, KeyCode::Char('!'));
+        assert_eq!(app.view.editor.lines, ["new", "text!"]);
+        app.handle_key(key(KeyCode::Char('z'), KeyModifiers::CONTROL));
+        assert_eq!(app.view.editor.lines, ["new", "text"]);
+        // Undo and redo themselves keep it right too.
+        app.handle_key(key(KeyCode::Char('y'), KeyModifiers::CONTROL));
+        press(&mut app, KeyCode::Char('?'));
+        app.handle_key(key(KeyCode::Char('z'), KeyModifiers::CONTROL));
+        assert_eq!(app.view.editor.lines, ["new", "text"]);
     }
 
     #[test]

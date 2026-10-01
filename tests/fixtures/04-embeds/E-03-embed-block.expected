@@ -1,0 +1,18 @@
+--- rendered ---
+«╭─ ⧉ notes/Blocks › ^para1»{darkgray}
+«│ »{darkgray}first paragraph
+«│ »{darkgray}continues here
+«╰─»{darkgray}
+«╭─ ⧉ notes/Blocks › ^item2»{darkgray}
+«│ »{darkgray}«• »{cyan}two
+«│ │ »{darkgray}«◦ »{cyan}child
+«╰─»{darkgray}
+«╭─ ⧉ notes/Blocks › ^tbl»{darkgray}
+«│ ┌───┬───┐»{darkgray}
+«│ │»{darkgray} «a»{bold} «│»{darkgray} «b»{bold} «│»{darkgray}
+«│ ├───┼───┤»{darkgray}
+«│ │»{darkgray} 1 «│»{darkgray} 2 «│»{darkgray}
+«│ └───┴───┘»{darkgray}
+«╰─»{darkgray}
+«╭─ ⚠ notes/Blocks › ^nope (not found)»{darkgray}
+«╰─»{darkgray}

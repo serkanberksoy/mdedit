@@ -66,12 +66,63 @@ pub fn link_at(line: &str, col: usize) -> Option<Link> {
     None
 }
 
-/// A file link from `target` (`Note#Heading`); block refs (`#^id`) just
-/// open the note.
+/// Every link in `line` (not embeds or images), with the text it shows
+/// when rendered: `[[Note|alias]]` shows `alias`, `[text](url)` shows
+/// `text`, a bare address itself. In the order they appear.
+pub fn all_links(line: &str) -> Vec<(Link, String)> {
+    let mut found: Vec<(usize, Link, String)> = Vec::new();
+    let mut from = 0;
+    while let Some(open) = line[from..].find("[[").map(|i| from + i) {
+        let Some(close) = line[open + 2..].find("]]").map(|i| open + 2 + i) else {
+            break;
+        };
+        if !line[..open].ends_with('!') {
+            let inner = &line[open + 2..close];
+            let target = inner.split('|').next().unwrap_or_default();
+            let shown = crate::markdown::inline::link_text(inner);
+            found.push((open, file_link(target.trim_end_matches('\\')), shown));
+        }
+        from = close + 2;
+    }
+    let mut from = 0;
+    while let Some(mid) = line[from..].find("](").map(|i| from + i) {
+        let open = line[..mid].rfind('[');
+        let close = line[mid + 2..].find(')').map(|i| mid + 2 + i);
+        if let (Some(open), Some(close)) = (open, close)
+            && !line[..open].ends_with('!')
+            && !line[open..mid].starts_with("[[")
+        {
+            let text = line[open + 1..mid].to_string();
+            found.push((open, target_link(&line[mid + 2..close]), text));
+        }
+        from = mid + 2;
+    }
+    for scheme in ["https://", "http://"] {
+        let mut from = 0;
+        while let Some(start) = line[from..].find(scheme).map(|i| from + i) {
+            let end = line[start..]
+                .find(|c: char| c.is_whitespace() || c == ')')
+                .map_or(line.len(), |i| start + i);
+            // Not the target of a [text](url) link.
+            if !line[..start].ends_with("](") {
+                let url = line[start..end].to_string();
+                found.push((start, Link::Web(url.clone()), url));
+            }
+            from = end;
+        }
+    }
+    found.sort_by_key(|(at, _, _)| *at);
+    found
+        .into_iter()
+        .map(|(_, link, text)| (link, text))
+        .collect()
+}
+
+/// A file link from `target` (`Note#Heading`, or a block `Note#^id`, whose
+/// `heading` starts with `^`).
 fn file_link(target: &str) -> Link {
     let (path, fragment) = target.split_once('#').unwrap_or((target, ""));
-    let heading =
-        (!fragment.is_empty() && !fragment.starts_with('^')).then(|| fragment.trim().to_string());
+    let heading = (!fragment.is_empty()).then(|| fragment.trim().to_string());
     Link::File {
         path: path.trim().to_string(),
         heading,
@@ -106,19 +157,29 @@ pub fn percent_decode(s: &str) -> String {
 /// `![[Note]]` or `![[Note#Heading]]` (surrounding spaces allowed). Embeds
 /// of other files (images, PDFs …) aren't notes and give `None`.
 pub fn embed_target(line: &str) -> Option<Link> {
+    let link = any_embed_target(line)?;
+    let Link::File { path, .. } = &link else {
+        return None;
+    };
+    is_note_path(path).then_some(link)
+}
+
+/// Whether a link target is a note (`.md`, `.markdown` or no extension).
+pub fn is_note_path(path: &str) -> bool {
+    match Path::new(path).extension() {
+        None => true,
+        Some(ext) => ext.eq_ignore_ascii_case("md") || ext.eq_ignore_ascii_case("markdown"),
+    }
+}
+
+/// A line that is only an embed (`![[target]]`) of any file, a note or
+/// not (a host may show other files: [`crate::resolver::Resolver::embed`]).
+pub fn any_embed_target(line: &str) -> Option<Link> {
     let inner = line.trim().strip_prefix("![[")?.strip_suffix("]]")?;
     if inner.contains("]]") {
         return None;
     }
-    let link = file_link(inner.split('|').next().unwrap_or_default());
-    let Link::File { path, .. } = &link else {
-        return None;
-    };
-    let is_note = match Path::new(path).extension() {
-        None => true,
-        Some(ext) => ext.eq_ignore_ascii_case("md") || ext.eq_ignore_ascii_case("markdown"),
-    };
-    is_note.then_some(link)
+    Some(file_link(inner.split('|').next().unwrap_or_default()))
 }
 
 /// Splits a command-line argument like `note.md#My Title` into the file and
@@ -179,7 +240,8 @@ pub fn link_definition(line: &str) -> Option<(&str, &str, &str)> {
     let rest = line[indent..].strip_prefix('[')?;
     let close = rest.find(']')?;
     let label = &rest[..close];
-    if label.trim().is_empty() || label.contains('[') {
+    // `[^label]:` is a footnote (X-05), not a link.
+    if label.trim().is_empty() || label.contains('[') || label.starts_with('^') {
         return None;
     }
     let after = rest[close + 1..].strip_prefix(':')?;
@@ -258,6 +320,7 @@ mod tests {
             Some(("a b", "<My Note.md>", " \"Title\""))
         );
         for line in [
+            "[^1]: a footnote",
             "[docs]:",
             "[docs] : x",
             "    [docs]: x",
@@ -349,8 +412,8 @@ mod tests {
         assert_eq!(link_at("[[#Local]]", 3), file("", Some("Local")));
         assert_eq!(
             link_at("[[Note#^block1]]", 3),
-            file("Note", None),
-            "block refs just open the note"
+            file("Note", Some("^block1")),
+            "a block ref keeps its id (E-03)"
         );
         assert_eq!(link_at(r"| [[Note\|alias]] |", 5), file("Note", None));
     }

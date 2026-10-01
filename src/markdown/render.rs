@@ -174,7 +174,7 @@ pub fn render_with(line: &str, options: &Options) -> Rendered {
             marker,
             text,
         } => {
-            let level = nesting(&line[..indent]);
+            let level = nesting(&line[..indent], options.indent_width);
             let shown = if is_ordered(marker) {
                 format!("{marker} ")
             } else {
@@ -190,7 +190,7 @@ pub fn render_with(line: &str, options: &Options) -> Rendered {
             text,
         } => {
             let (glyph, glyph_style, text_style) = task_look(state, options);
-            let level = nesting(&line[..indent]);
+            let level = nesting(&line[..indent], options.indent_width);
             let mut head = vec![guides(level)];
             if is_ordered(marker) {
                 head.push(Span::styled(
@@ -227,9 +227,11 @@ pub fn render_with(line: &str, options: &Options) -> Rendered {
 /// Rendered continuation line of a list item (L-07): the item's indent
 /// guides, then the text lined up with the item's text (which is also the
 /// hanging indent when it wraps).
-pub fn render_continuation(line: &str, item: &str) -> Rendered {
+pub fn render_continuation(line: &str, item: &str, options: &Options) -> Rendered {
     let level = match parse_line(item) {
-        Block::Bullet { indent, .. } | Block::Task { indent, .. } => nesting(&item[..indent]),
+        Block::Bullet { indent, .. } | Block::Task { indent, .. } => {
+            nesting(&item[..indent], options.indent_width)
+        }
         _ => 0,
     };
     let text_column = render(item).indent;
@@ -389,21 +391,133 @@ pub fn render_link_definition(line: &str) -> Line<'static> {
     Line::from(spans)
 }
 
-pub fn render_frontmatter_line(line: &str) -> Line<'static> {
+/// A line of a comment block (X-08): dimmed, its text in italics.
+pub fn render_comment_line(line: &str) -> Line<'static> {
+    let dim = Style::default().fg(Color::DarkGray);
+    if line.trim() == "%%" {
+        return Line::from(Span::styled(line.to_string(), dim));
+    }
+    Line::from(Span::styled(
+        line.to_string(),
+        dim.add_modifier(Modifier::ITALIC),
+    ))
+}
+
+/// A line of the frontmatter as a property (P-01, P-02, P-03, P-06): the
+/// key, then its value by type: a checkbox `☑` / `☐`, a number, a date,
+/// a list as chips, `tags` as tags, text with its links and tags styled.
+/// A list item (`  - x`) under key `owner` is a chip (a tag under `tags`).
+pub fn render_frontmatter_line(line: &str, owner: Option<&str>) -> Line<'static> {
     let dim = Style::default().fg(Color::DarkGray);
     if line.trim_end() == "---" {
         return Line::from(Span::styled("┄".repeat(40), dim));
     }
+    let indented = line.starts_with([' ', '\t']);
+    if let Some(item) = line.trim_start().strip_prefix("- ") {
+        let indent = line.len() - line.trim_start().len();
+        let mut spans = vec![Span::raw(" ".repeat(indent.max(2)))];
+        spans.push(property_chip(
+            owner.unwrap_or_default(),
+            unquote(item.trim()),
+        ));
+        return Line::from(spans);
+    }
     match line.split_once(':') {
-        Some((key, value)) if !key.starts_with([' ', '\t']) => Line::from(vec![
-            Span::styled(
+        Some((key, value)) if !indented => {
+            let mut spans = vec![Span::styled(
                 key.to_string(),
                 Style::default().fg(Color::Cyan).add_modifier(Modifier::DIM),
-            ),
-            Span::styled(format!(":{value}"), dim),
-        ]),
+            )];
+            let value = property_value(key.trim(), value.trim());
+            if !value.is_empty() {
+                spans.push(Span::raw(" "));
+                spans.extend(value);
+            }
+            Line::from(spans)
+        }
         _ => Line::from(Span::styled(line.replace('\t', TAB), dim)),
     }
+}
+
+/// A value without its quotes.
+fn unquote(value: &str) -> &str {
+    value
+        .strip_prefix('"')
+        .and_then(|v| v.strip_suffix('"'))
+        .or_else(|| value.strip_prefix('\'').and_then(|v| v.strip_suffix('\'')))
+        .unwrap_or(value)
+}
+
+/// One item of a list property: a tag under `tags`, else a chip.
+fn property_chip(key: &str, item: &str) -> Span<'static> {
+    if matches!(key, "tags" | "tag") {
+        let tag = item.trim_start_matches('#');
+        return Span::styled(
+            format!("#{tag}"),
+            Style::default()
+                .fg(Color::LightCyan)
+                .bg(Color::Rgb(25, 55, 100)),
+        );
+    }
+    Span::styled(
+        item.to_string(),
+        Style::default().fg(Color::White).bg(Color::Rgb(60, 60, 60)),
+    )
+}
+
+/// Whether `value` looks like a date (`2026-06-29`, with a time too).
+fn is_date(value: &str) -> bool {
+    let b = value.as_bytes();
+    b.len() >= 10
+        && b[4] == b'-'
+        && b[7] == b'-'
+        && b[..10]
+            .iter()
+            .enumerate()
+            .all(|(i, c)| i == 4 || i == 7 || c.is_ascii_digit())
+}
+
+/// A property's value as styled spans, by its type.
+fn property_value(key: &str, value: &str) -> Vec<Span<'static>> {
+    if value.is_empty() {
+        return Vec::new();
+    }
+    let list = value.strip_prefix('[').and_then(|v| v.strip_suffix(']'));
+    let tags = matches!(key, "tags" | "tag");
+    if list.is_some() || tags {
+        let items: Vec<&str> = list
+            .unwrap_or(value)
+            .split(if list.is_some() { ',' } else { ' ' })
+            .map(|i| unquote(i.trim()))
+            .filter(|i| !i.is_empty())
+            .collect();
+        let mut spans = Vec::new();
+        for (n, item) in items.iter().enumerate() {
+            if n > 0 {
+                spans.push(Span::raw(" "));
+            }
+            spans.push(property_chip(key, item));
+        }
+        return spans;
+    }
+    match value {
+        "true" => return vec![Span::styled("☑", Style::default().fg(Color::Green))],
+        "false" => return vec![Span::styled("☐", Style::default().fg(Color::DarkGray))],
+        _ => {}
+    }
+    if value.parse::<f64>().is_ok() {
+        return vec![Span::styled(
+            value.to_string(),
+            Style::default().fg(Color::Yellow),
+        )];
+    }
+    if is_date(value) {
+        return vec![Span::styled(
+            value.to_string(),
+            Style::default().fg(Color::LightMagenta),
+        )];
+    }
+    inline::inline_spans(unquote(value), Style::default())
 }
 
 /// Byte length of a task's syntax prefix (`  - [ ] `), capped at the line length.

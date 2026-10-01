@@ -25,6 +25,18 @@ pub trait Resolver {
     fn load(&self, path: &Path) -> Option<Arc<Vec<String>>> {
         crate::embed::load(path)
     }
+
+    /// The lines an embed of the file at `path` shows: `fragment` is what
+    /// follows `#` (a heading, `^block`). The default loads the note
+    /// ([`Resolver::load`]) and cuts out the part; a host can show other
+    /// files its own way (as a code block it renders).
+    fn embed(&self, path: &Path, fragment: Option<&str>) -> Option<Vec<String>> {
+        let lines = self.load(path)?;
+        match fragment {
+            Some(f) => crate::embed::part(&lines, f),
+            None => Some(lines.to_vec()),
+        }
+    }
 }
 
 /// mdedit's own resolver: a target is a path relative to the note's folder

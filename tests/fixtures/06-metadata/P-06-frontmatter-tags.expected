@@ -1,7 +1,5 @@
 --- rendered ---
 «┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄»{darkgray}
-«title»{cyan dim} Example
-«status»{cyan dim} active
+«tags»{cyan dim} «#project»{lightcyan bg:rgb(25,55,100)} «#ai»{lightcyan bg:rgb(25,55,100)}
 «┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄»{darkgray}
-
-«█ BODY»{magenta bold underlined}
+body

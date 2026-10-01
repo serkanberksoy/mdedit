@@ -1,7 +1,10 @@
 ---
 title: mdedit feature showcase
 status: every implemented feature, in one note
-version: 2.1.0
+tags: [showcase, markdown]
+reviewed: true
+created: 2026-06-29
+version: 3.13.1
 ---
 # mdedit Feature Showcase
 
@@ -81,6 +84,9 @@ unfolds it.
    3.  third nested
 3. Third
 
+Tab indents by 2 spaces; set `indent_width = "4"` in the settings for
+4 (the indent guides follow it).
+
 1) Parenthesis style
 2) Second
 
@@ -99,12 +105,27 @@ unfolds it.
 1. [ ] Numbered task
 2. [x] Numbered done task
 
+## Footnotes and comments
+
+A claim with a footnote[^1], a named one[^source], and one written in
+place^[an inline footnote]. %%A comment: dimmed, and hidden from readers
+of the note in Obsidian.%%
+
+%%
+A comment block, across lines:
+move the cursor into it to edit it.
+%%
+
+[^1]: The first footnote's text.
+[^source]: A named footnote.
+
 ## Links and tags
 
 - Wiki link: [[daily_note]] (Ctrl+Enter opens it)
 - With an alias: [[daily_note|a daily note]]
 - To a heading in another note: [[sample#Lists]] (shown as `sample › Lists`)
 - To a heading in this note: [[#Tables]]
+- To a note that doesn't exist: [[no-such-note]] (dimmed)
 - Markdown links: [the sample note](sample.md) (Ctrl+Enter follows it) and
   [the Rust site](https://www.rust-lang.org); **markup** works in [the *text*](sample.md)
 - Bare URL: https://github.com/oliveryh/obsidian-emoji-toolbar
@@ -124,6 +145,11 @@ A line that is just an embed shows the other note (relative to this file).
 Move the cursor onto it to see the link instead.
 
 ![[sample#Lists]]
+
+A block (`#^id`: the list item that ends with ` ^second`, with its
+sub-items):
+
+![[sample#^second]]
 
 A whole note:
 
@@ -246,8 +272,15 @@ Move the cursor into the table to see it raw.
 
 ## Navigation and search
 
-- **Ctrl+V** switches to source mode (every line raw Markdown, nothing
-  folded or expanded) and back; `mdedit -t` starts in source mode.
+- **Alt+V** cycles the modes: source mode
+  (every line raw Markdown, nothing folded or expanded; `mdedit -t` starts
+  in it), then **view mode**: read-only, every line rendered (the cursor
+  line too). In view mode ↑↓ move over rendered rows, **Tab** jumps to
+  the next link (try it on the links in this note), **Enter** or a click
+  follows it, and **Esc** goes back to editing.
+
+- **Ctrl+V** pastes from the clipboard (copy something, then try it here);
+  a URL pasted over a selection makes a link, as with the terminal's paste.
 
 - **Page Up / Page Down** move a screen at a time.
 - **Ctrl+F** searches: the cursor jumps to the first match as you type,

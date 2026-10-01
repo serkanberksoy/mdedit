@@ -14,6 +14,7 @@ use ratatui::Terminal;
 use ratatui::backend::TestBackend;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::layout::{Position, Rect};
+use ratatui::style::Modifier;
 use ratatui::widgets::{Paragraph, Widget};
 
 fn tmp(name: &str) -> PathBuf {
@@ -207,7 +208,10 @@ fn a_host_resolver_finds_links_and_embeds_its_own_way() {
     let mut shared = Shared::new();
     shared.resolver = Box::new(Vault(d.clone()));
     let note = d.join("note.md");
-    let mut view = EditorView::new("[[Target#Part]]\n![[Target]]\n[[Nowhere]]", Some(note));
+    let mut view = EditorView::new(
+        "[[Target#Part]]\n![[Target]]\n[[Nowhere#Top]]\n[site](https://example.com/a)",
+        Some(note),
+    );
 
     // Following a link to another note is the host's job (e.g. a new tab).
     view.editor.col = 3;
@@ -219,9 +223,23 @@ fn a_host_resolver_finds_links_and_embeds_its_own_way() {
             heading: Some("Part".into())
         }
     );
+    // A link to a note that isn't there: the host may offer to make it.
     view.editor.row = 2;
-    assert_eq!(view.handle_key(follow, &mut shared), Outcome::Consumed);
+    assert_eq!(
+        view.handle_key(follow, &mut shared),
+        Outcome::MissingLink {
+            target: "Nowhere".into(),
+            heading: Some("Top".into())
+        }
+    );
     assert!(view.status.contains("not in the vault"), "{}", view.status);
+    // A web link: the host opens it (a browser).
+    view.editor.row = 3;
+    view.editor.col = 1;
+    assert_eq!(
+        view.handle_key(follow, &mut shared),
+        Outcome::OpenUrl("https://example.com/a".into())
+    );
 
     // The embed on line 2 is found through the vault too.
     view.editor.row = 0;
@@ -249,4 +267,414 @@ fn views_share_settings_but_not_documents() {
     one.handle_key(ctrl('z'), &mut shared);
     assert_eq!(one.editor.lines, [""], "each view has its own undo");
     assert_eq!(two.editor.lines, ["x"]);
+}
+
+/// A host's code block processor: `shout` blocks are shown in capitals.
+struct Shout;
+
+impl mdedit::processor::CodeBlockProcessor for Shout {
+    fn handles(&self, lang: &str) -> bool {
+        lang == "shout"
+    }
+
+    fn render(
+        &self,
+        _lang: &str,
+        source: &[String],
+        _from: Option<&Path>,
+        width: usize,
+    ) -> Vec<ratatui::text::Line<'static>> {
+        let mut lines: Vec<_> = source.iter().map(|l| l.to_uppercase().into()).collect();
+        lines.push(format!("width {width}").into());
+        lines
+    }
+}
+
+#[test]
+fn a_host_renders_its_own_code_blocks_until_the_cursor_is_in_them() {
+    let mut shared = Shared::new();
+    shared.processor = Some(Box::new(Shout));
+    let text = "top\n```shout\nhello\n```\n```rust\nlet x;\n```\nend";
+    let mut view = EditorView::new(text, None);
+    let mut terminal = Terminal::new(TestBackend::new(30, 12)).unwrap();
+    let mut draw = |view: &mut EditorView, shared: &mut Shared| {
+        terminal
+            .draw(|frame| {
+                let widget = EditorWidget::new(shared).status_bar(false);
+                frame.render_stateful_widget(widget, frame.area(), view);
+            })
+            .unwrap();
+        rows(&terminal)
+            .iter()
+            .map(|r| r.trim_end().to_string())
+            .collect::<Vec<_>>()
+    };
+    let screen = draw(&mut view, &mut shared);
+    assert_eq!(
+        screen[..7],
+        [
+            "top",
+            "╭─ shout",
+            "│ HELLO",
+            "│ width 28",
+            "╰─",
+            "╭─ rust",
+            "│ let x;"
+        ],
+        "the block's result in place of its code; other languages as code"
+    );
+    // The cursor in the block: its source, to edit it.
+    view.editor.row = 2;
+    let screen = draw(&mut view, &mut shared);
+    assert_eq!(screen[1..4], ["```shout", "hello", "```"]);
+}
+
+/// A processor whose result rows have actions: `pick` blocks list their
+/// lines, each row acting as `pick:<line>`.
+struct Pick;
+
+impl mdedit::processor::CodeBlockProcessor for Pick {
+    fn handles(&self, lang: &str) -> bool {
+        lang == "pick"
+    }
+
+    fn render(
+        &self,
+        lang: &str,
+        source: &[String],
+        from: Option<&Path>,
+        width: usize,
+    ) -> Vec<ratatui::text::Line<'static>> {
+        self.render_rows(lang, source, from, width)
+            .into_iter()
+            .map(|(line, _)| line)
+            .collect()
+    }
+
+    fn render_rows(
+        &self,
+        _lang: &str,
+        source: &[String],
+        _from: Option<&Path>,
+        _width: usize,
+    ) -> Vec<(ratatui::text::Line<'static>, Option<String>)> {
+        source
+            .iter()
+            .map(|l| (format!("• {l}").into(), Some(format!("pick:{l}"))))
+            .collect()
+    }
+}
+
+fn view_mode(view: &mut EditorView, shared: &mut Shared) {
+    // Alt+V cycles: live preview → source → view.
+    let cycle = key(KeyCode::Char('v'), KeyModifiers::ALT);
+    view.handle_key(cycle, shared);
+    view.handle_key(cycle, shared);
+    assert!(view.reading, "view mode");
+}
+
+fn draw_view(
+    terminal: &mut Terminal<TestBackend>,
+    shared: &mut Shared,
+    view: &mut EditorView,
+) -> Vec<String> {
+    terminal
+        .draw(|frame| {
+            let widget = EditorWidget::new(shared).status_bar(false);
+            frame.render_stateful_widget(widget, frame.area(), view);
+        })
+        .unwrap();
+    rows(terminal)
+        .iter()
+        .map(|r| r.trim_end().to_string())
+        .collect()
+}
+
+#[test]
+fn view_mode_moves_over_rendered_rows_and_acts_on_them() {
+    let mut shared = Shared::new();
+    shared.processor = Some(Box::new(Pick));
+    let text = "# Title\n```pick\napple\npear\n```\nend";
+    let mut view = EditorView::new(text, None);
+    view_mode(&mut view, &mut shared);
+    let mut terminal = Terminal::new(TestBackend::new(30, 8)).unwrap();
+    let screen = draw_view(&mut terminal, &mut shared, &mut view);
+    assert_eq!(screen[0], "█ TITLE", "the cursor line is rendered too");
+    assert_eq!(
+        screen[1..4],
+        ["╭─ pick", "│ • apple", "│ • pear"],
+        "{screen:?}"
+    );
+    assert_eq!(view.cursor, None, "no text cursor: a row cursor");
+    // Down: the block's frame, then its rows.
+    let down = key(KeyCode::Down, KeyModifiers::NONE);
+    let enter = key(KeyCode::Enter, KeyModifiers::NONE);
+    for _ in 0..3 {
+        view.handle_key(down, &mut shared);
+        draw_view(&mut terminal, &mut shared, &mut view);
+    }
+    assert_eq!(
+        view.handle_key(enter, &mut shared),
+        Outcome::Action("pick:pear".into())
+    );
+    // A click on a row acts too.
+    draw_view(&mut terminal, &mut shared, &mut view);
+    assert_eq!(
+        view.click(Position::new(4, 2), &mut shared),
+        Outcome::Action("pick:apple".into())
+    );
+}
+
+#[test]
+fn view_mode_follows_links_with_tab_and_enter_and_edits_nothing() {
+    let d = tmp("view-links");
+    fs::write(d.join("other.md"), "# Other\n").unwrap();
+    let mut shared = Shared::new();
+    let note = d.join("note.md");
+    let mut view = EditorView::new(
+        "intro\nsee [[other]] and [[#Part]]\n## Part\ntext",
+        Some(note),
+    );
+    view_mode(&mut view, &mut shared);
+    let mut terminal = Terminal::new(TestBackend::new(40, 8)).unwrap();
+    draw_view(&mut terminal, &mut shared, &mut view);
+    let tab = key(KeyCode::Tab, KeyModifiers::NONE);
+    let enter = key(KeyCode::Enter, KeyModifiers::NONE);
+    view.handle_key(tab, &mut shared);
+    assert_eq!(
+        view.handle_key(enter, &mut shared),
+        Outcome::OpenLink {
+            path: d.join("other.md"),
+            heading: None
+        },
+        "Tab went to the first link"
+    );
+    view.handle_key(tab, &mut shared);
+    view.handle_key(enter, &mut shared);
+    assert_eq!(
+        view.editor.row, 2,
+        "the second link: a heading in this note"
+    );
+    // Nothing edits the text.
+    let before = view.editor.lines.clone();
+    for code in [KeyCode::Char('x'), KeyCode::Backspace, KeyCode::Delete] {
+        view.handle_key(key(code, KeyModifiers::NONE), &mut shared);
+    }
+    view.handle_paste("pasted", &mut shared);
+    view.handle_key(ctrl('t'), &mut shared);
+    assert_eq!(view.editor.lines, before);
+    assert!(!view.is_dirty());
+    assert!(view.status.contains("read-only"), "{}", view.status);
+    // Esc goes back to editing.
+    view.handle_key(key(KeyCode::Esc, KeyModifiers::NONE), &mut shared);
+    assert!(!view.reading && !view.source_mode);
+}
+
+#[test]
+fn a_click_on_a_link_in_the_live_preview_follows_it() {
+    let d = tmp("live-click");
+    fs::write(d.join("other.md"), "# Other\n").unwrap();
+    let mut shared = Shared::new();
+    let mut view = EditorView::new("first line\nsee [[other]] here", Some(d.join("note.md")));
+    let mut terminal = Terminal::new(TestBackend::new(40, 6)).unwrap();
+    let screen = draw_view(&mut terminal, &mut shared, &mut view);
+    assert_eq!(screen[1], "see other here", "rendered: not the cursor line");
+    assert_eq!(
+        view.click(Position::new(6, 1), &mut shared),
+        Outcome::OpenLink {
+            path: d.join("other.md"),
+            heading: None
+        }
+    );
+    assert_eq!(
+        view.click(Position::new(1, 1), &mut shared),
+        Outcome::Consumed,
+        "not on the link: the cursor goes there"
+    );
+    assert_eq!((view.editor.row, view.editor.col), (1, 1));
+    // On the line being edited (raw text), the cursor moves in it.
+    draw_view(&mut terminal, &mut shared, &mut view);
+    assert_eq!(
+        view.click(Position::new(6, 1), &mut shared),
+        Outcome::Consumed
+    );
+    assert_eq!((view.editor.row, view.editor.col), (1, 6));
+}
+
+/// The char column of `needle` in a drawn row.
+fn x_of(row: &str, needle: &str) -> u16 {
+    row[..row.find(needle).expect("on the row")].chars().count() as u16
+}
+
+/// Where `needle` is drawn (the first row that has it).
+fn at(screen: &[String], needle: &str) -> Position {
+    let y = screen
+        .iter()
+        .position(|r| r.contains(needle))
+        .unwrap_or_else(|| panic!("{needle:?} isn't drawn: {screen:#?}"));
+    Position::new(x_of(&screen[y], needle), y as u16)
+}
+
+#[test]
+fn a_click_in_the_text_places_the_cursor_where_the_source_is() {
+    let mut shared = Shared::new();
+    let text = "first line\n## A **bold** word\n- an item with `code` in it\nlast";
+    let mut view = EditorView::new(text, Some(tmp("click-cursor").join("note.md")));
+    let mut terminal = Terminal::new(TestBackend::new(40, 8)).unwrap();
+    let screen = draw_view(&mut terminal, &mut shared, &mut view);
+    // A rendered heading: markers hidden, the cursor lands in the source.
+    assert_eq!(
+        view.click(at(&screen, "word"), &mut shared),
+        Outcome::Consumed
+    );
+    assert_eq!(
+        (view.editor.row, view.editor.col),
+        (1, "## A **bold** ".chars().count())
+    );
+    // A bullet (drawn as a glyph) and a code span.
+    view.click(at(&screen, "in it"), &mut shared);
+    assert_eq!(
+        (view.editor.row, view.editor.col),
+        (2, "- an item with `code` ".chars().count())
+    );
+    // The line being edited is raw: the click's column is the text's.
+    let screen = draw_view(&mut terminal, &mut shared, &mut view);
+    assert!(
+        screen.iter().any(|r| r == "- an item with `code` in it"),
+        "{screen:#?}"
+    );
+    view.click(at(&screen, "item"), &mut shared);
+    assert_eq!((view.editor.row, view.editor.col), (2, 5));
+    // Past the end of a line: its end.
+    let last = at(&screen, "last");
+    view.click(Position::new(30, last.y), &mut shared);
+    assert_eq!((view.editor.row, view.editor.col), (3, 4));
+    // A selection ends.
+    view.editor.anchor = Some((0, 0));
+    let screen = draw_view(&mut terminal, &mut shared, &mut view);
+    let first = at(&screen, "first");
+    view.click(Position::new(2, first.y), &mut shared);
+    assert_eq!(
+        (view.editor.row, view.editor.col, view.editor.anchor),
+        (0, 2, None)
+    );
+}
+
+#[test]
+fn a_click_in_a_wrapped_line_and_in_source_mode() {
+    let mut shared = Shared::new();
+    let long = "word ".repeat(12);
+    let text = format!("top\n{}end", long);
+    let mut view = EditorView::new(&text, Some(tmp("click-wrap").join("note.md")));
+    let mut terminal = Terminal::new(TestBackend::new(20, 8)).unwrap();
+    view.editor.row = 1;
+    let screen = draw_view(&mut terminal, &mut shared, &mut view);
+    // The second screen row of the line being edited.
+    assert!(screen[2].starts_with("word"), "{screen:#?}");
+    view.click(Position::new(1, 2), &mut shared);
+    // The first row's text and the space it broke at.
+    let first_row = screen[1].trim_end().chars().count() + 1;
+    assert_eq!((view.editor.row, view.editor.col), (1, first_row + 1));
+    // Source mode: every line raw.
+    view.source_mode = true;
+    let screen = draw_view(&mut terminal, &mut shared, &mut view);
+    assert_eq!(screen[0], "top");
+    view.click(Position::new(2, 0), &mut shared);
+    assert_eq!((view.editor.row, view.editor.col), (0, 2));
+}
+
+#[test]
+fn a_links_click_area_is_the_link_not_the_same_word_before_it() {
+    let d = tmp("same-word");
+    fs::write(d.join("Charts.md"), "# Charts\n").unwrap();
+    let mut shared = Shared::new();
+    let text = "first line\ncharts and queries in [[Charts]] here\nCharts, again: [[Charts]]";
+    let mut view = EditorView::new(text, Some(d.join("note.md")));
+    let mut terminal = Terminal::new(TestBackend::new(60, 6)).unwrap();
+    let screen = draw_view(&mut terminal, &mut shared, &mut view);
+    assert_eq!(screen[1], "charts and queries in Charts here");
+    let link_x = "charts and queries in ".len() as u16 + 1;
+    assert_eq!(
+        view.click(Position::new(link_x, 1), &mut shared),
+        Outcome::OpenLink {
+            path: d.join("Charts.md"),
+            heading: None
+        },
+        "the link itself"
+    );
+    assert_eq!(
+        view.click(Position::new(1, 1), &mut shared),
+        Outcome::Consumed,
+        "the plain word with the same letters: the cursor goes there"
+    );
+    // The same word with the same capital before the link.
+    let link_x = "Charts, again: ".len() as u16 + 1;
+    assert!(matches!(
+        view.click(Position::new(link_x, 2), &mut shared),
+        Outcome::OpenLink { .. }
+    ));
+    view.editor.row = 0;
+    draw_view(&mut terminal, &mut shared, &mut view);
+    assert_eq!(
+        view.click(Position::new(1, 2), &mut shared),
+        Outcome::Consumed
+    );
+}
+
+#[test]
+fn a_host_names_a_document_without_a_file() {
+    let mut view = EditorView::new("text", None);
+    assert_eq!(view.title(), "untitled");
+    view.name = Some("Diff: Note.md".into());
+    assert_eq!(view.title(), "Diff: Note.md");
+    assert!(
+        view.status_line("").contains("Diff: Note.md"),
+        "{}",
+        view.status_line("")
+    );
+}
+
+#[test]
+fn a_host_fills_a_margin_beside_the_lines() {
+    let mut shared = Shared::new();
+    let mut view = EditorView::new("one\ntwo\nthree", None);
+    view.margin_width = 2;
+    view.margin.insert(1, ratatui::text::Line::from("+"));
+    let mut terminal = Terminal::new(TestBackend::new(20, 4)).unwrap();
+    let screen = draw_view(&mut terminal, &mut shared, &mut view);
+    assert_eq!(screen[0], "  one");
+    assert_eq!(screen[1], "+ two", "the host's mark, then the text");
+    assert_eq!(view.text_area.x, 2, "clicks and the cursor follow the text");
+    // Without a width there's no margin.
+    view.margin_width = 0;
+    let screen = draw_view(&mut terminal, &mut shared, &mut view);
+    assert_eq!(screen[1], "two");
+}
+
+#[test]
+fn links_to_missing_notes_are_dimmed() {
+    let d = tmp("unresolved");
+    fs::write(d.join("here.md"), "# Here\n").unwrap();
+    let mut shared = Shared::new();
+    let mut view = EditorView::new(
+        "top\nsee [[here]] and [[gone|Gone]] and [[here#Part]]",
+        Some(d.join("note.md")),
+    );
+    let mut terminal = Terminal::new(TestBackend::new(60, 4)).unwrap();
+    let screen = draw_view(&mut terminal, &mut shared, &mut view);
+    assert_eq!(screen[1], "see here and Gone and here › Part");
+    let style = |needle: &str| {
+        let p = at(&screen, needle);
+        terminal.backend().buffer()[(p.x, p.y)].style()
+    };
+    assert!(
+        style("Gone").add_modifier.contains(Modifier::DIM),
+        "missing: dimmed"
+    );
+    assert!(!style("here and").add_modifier.contains(Modifier::DIM));
+    assert_eq!(
+        style("Gone").fg,
+        style("here and").fg,
+        "still a link's color"
+    );
 }

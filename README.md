@@ -15,7 +15,7 @@ mdedit --help                 # all options, keys and settings
 Type to edit, move with the arrows. **Ctrl+S** saves, **Ctrl+X** exits,
 **Ctrl+F** searches, **Ctrl+Z** undoes.
 
-**Version:** 2.1.0 · **Stage:** Milestones 1 (core editor) and 2 (links) complete; next: M3 · [Version history](VERSION.md)
+**Version:** 3.13.1 · **Stage:** Milestones 1 (core editor) and 2 (links) complete; next: M3 · [Version history](VERSION.md)
 
 ```
 █ MARCH 14TH, 2026                    ← # heading, rendered
@@ -56,7 +56,7 @@ everything.
 
 ## Features
 
-Everything below is tested (72 of 89 tracked Obsidian features have
+Everything below is tested (83 of 92 tracked Obsidian features have
 approved tests; see [tests/TEST_MATRIX.md](tests/TEST_MATRIX.md)). Open
 [example_mds/feature_showcase.md](example_mds/feature_showcase.md) in
 mdedit to try each one.
@@ -67,7 +67,7 @@ mdedit to try each one.
   syntax is there exactly where you edit it.
 - Multi-line blocks (frontmatter, code blocks, tables) turn raw as a whole
   when the cursor enters them. Selected lines are raw too.
-- **Source mode** (Ctrl+V, or `mdedit -t`) shows every line raw.
+- **Three modes**, cycled with Alt+V: the live preview, **source mode** (every line raw; `mdedit -t` starts in it) and **view mode** (read-only, every line rendered: move over rendered rows, Tab to a link, Enter or a click follows it).
 - **Soft wrap**: long lines wrap at word boundaries, continuation rows line
   up under the text (also in lists and quotes), and ↑ / ↓ move by screen row.
 
@@ -207,7 +207,9 @@ heading at the top; a link to a heading in the same note jumps there.
 | Ctrl+T | Turn the line into a task (or add a new task below) |
 | Ctrl+L | Close the task (`[x]`), or reopen a closed one |
 | Ctrl+K | Fold / unfold what's under the cursor: a heading's section, a list item with sub-items, or a callout (`> [!type]-` starts folded). A folded item shows `▸ N lines` |
-| Ctrl+V | Switch between the live preview and source mode (every line raw) |
+| Ctrl+V | Paste from the clipboard (read with wl-paste, xclip, xsel or pbpaste); the terminal's own paste works too |
+| Alt+V | Cycle the modes: live preview → source mode (every line raw) → view mode (read-only, every line rendered) → live preview |
+| Tab / Shift+Tab (view mode) | Go to the next / previous link (Enter or a click follows it; Esc edits again) |
 | Ctrl+Enter / Alt+Enter | Follow the link under the cursor (`[[Note]]`, `[[Note#Heading]]`, `[text](file.md)`), relative to this file; asks to save unsaved changes first |
 | Ctrl+O | Open a file: folder browser, type to filter or type a path; asks to save unsaved changes first |
 | Ctrl+S | Save (an untitled document opens Save As) |
@@ -241,6 +243,8 @@ auto_pair = "on"
 images = "auto"
 # How many steps Ctrl+Z can undo: 1 to 10000 (default 5)
 undo_steps = 5
+# Spaces Tab indents a list item (and per list level): 1 to 8 (default 2)
+indent_width = 2
 # Colors: "auto" (detected), "truecolor", "256" or "16"
 colors = "auto"
 # Symbols: "auto" (detected), "unicode" or "ascii" (e.g. the Linux console)

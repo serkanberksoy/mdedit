@@ -2,8 +2,13 @@
 //! cursor) and soft-wrapped into screen rows, with folds, tables, embeds,
 //! syntax highlighting and heading sizes.
 
+use std::cell::RefCell;
+
 use super::*;
+use crate::blocks::QuoteCode;
 use crate::images::{self, ImageLink, decoded_target, image_link};
+use crate::markdown::{Block, parse_line};
+use crate::processor::CodeBlockProcessor;
 use crate::resolver::Resolver;
 use crate::search;
 use crate::selection::Pos;
@@ -32,14 +37,30 @@ pub(super) struct Doc<'a> {
     options: Options,
     /// Ctrl+K fold choices by header line (`true` = collapsed).
     folds: &'a HashMap<usize, bool>,
-    /// Syntax-highlighted fenced code blocks, by first body line (B-09).
-    highlighted: Vec<(usize, Arc<Highlighted>)>,
+    /// Syntax-highlighted fenced code blocks (B-09), by their opening
+    /// line; worked out when a line of the block is drawn (a long note
+    /// has more blocks than the highlight cache holds).
+    highlighted: RefCell<HashMap<usize, Option<Arc<Highlighted>>>>,
     /// How embeds and images find their files; `None` shows embeds as
     /// links (e.g. inside an embedded note, so embeds can't loop).
     links: Option<Links<'a>>,
     /// The size of a terminal cell in pixels, to size images (E-04);
     /// `None` when images are off.
     image_cell: Option<(u16, u16)>,
+    /// The host's code block processor, if any.
+    processor: Option<&'a dyn CodeBlockProcessor>,
+}
+
+/// A fence's language: a top-level fence or one in a quote.
+fn block_lang(context: &LineContext) -> Option<&str> {
+    match context {
+        LineContext::FenceOpen { lang } => Some(lang),
+        LineContext::Quote {
+            code: Some(QuoteCode::Open(lang)),
+            ..
+        } => Some(lang),
+        _ => None,
+    }
 }
 
 impl<'a> Doc<'a> {
@@ -51,8 +72,6 @@ impl<'a> Doc<'a> {
         links: Option<Links<'a>>,
     ) -> Self {
         let structure = analyze_cached(lines);
-        let editing = |a, b| touches(cursor, None, a, b);
-        let highlighted = highlight_code_blocks(lines, &structure, editing);
         Doc {
             lines,
             structure,
@@ -61,10 +80,98 @@ impl<'a> Doc<'a> {
             search: None,
             options,
             folds,
-            highlighted,
+            highlighted: RefCell::new(HashMap::new()),
             links,
             image_cell: Some((10, 20)),
+            processor: None,
         }
+    }
+
+    /// The same document with the host's code blocks rendered by
+    /// `processor`.
+    pub(super) fn with_processor(mut self, processor: Option<&'a dyn CodeBlockProcessor>) -> Self {
+        self.processor = processor;
+        self
+    }
+
+    /// The processor and the language of the processed block that line `i`
+    /// is in, unless the cursor or selection is in the block.
+    fn processed_block(&self, i: usize) -> Option<(&'a dyn CodeBlockProcessor, usize, usize)> {
+        let processor = self.processor?;
+        let (start, end) = self.structure.reveal_group(i)?;
+        let lang = block_lang(&self.structure.context[start])?;
+        (processor.handles(lang) && !touches(self.cursor, self.selection, start, end))
+            .then_some((processor, start, end))
+    }
+
+    /// A processed block (at its opening line): the block's frame around
+    /// what the processor renders.
+    fn processed_rows(
+        &self,
+        processor: &dyn CodeBlockProcessor,
+        start: usize,
+        end: usize,
+        width: usize,
+    ) -> Wrapped {
+        let context = &self.structure.context;
+        let lang = block_lang(&context[start]).expect("a processed block starts with its fence");
+        let dim = Style::default().fg(Color::DarkGray);
+        // The body: between the fences (an unclosed block runs to the end).
+        let closed = matches!(
+            &context[end],
+            LineContext::FenceClose
+                | LineContext::Quote {
+                    code: Some(QuoteCode::Close),
+                    ..
+                }
+        );
+        let body_end = if closed { end } else { end + 1 };
+        // In a quote or callout: its bars before every row, the body
+        // without its `>`s.
+        let (bars, source): (Vec<Span<'static>>, Vec<String>) = match &context[start] {
+            LineContext::Quote { callouts, code } => {
+                let open = render_quote(&self.lines[start], callouts, code.as_ref()).line;
+                let mut bars = open.spans;
+                bars.pop(); // the frame's label
+                let body = self.lines[start + 1..body_end]
+                    .iter()
+                    .map(|l| match parse_line(l) {
+                        Block::Quote { text, .. } => text.to_string(),
+                        _ => l.clone(),
+                    })
+                    .collect();
+                (bars, body)
+            }
+            _ => (Vec::new(), self.lines[start + 1..body_end].to_vec()),
+        };
+        let bars_width: usize = bars.iter().map(|s| s.content.width()).sum();
+        let with_bars = |line: Line<'static>| {
+            let mut spans = bars.clone();
+            spans.extend(line.spans);
+            Line::from(spans)
+        };
+        let from = self.links.and_then(|l| l.from);
+        let mut out = Wrapped::empty();
+        out.push_line(with_bars(render_fence_open(lang)));
+        out.actions.push(None);
+        let inner = width.saturating_sub(2 + bars_width);
+        for (line, action) in processor.render_rows(lang, &source, from, inner) {
+            let mut spans = bars.clone();
+            spans.push(Span::styled("│ ", dim));
+            // The line's own style is its spans' base (a host's heading).
+            let base = line.style;
+            spans.extend(line.spans.into_iter().map(|s| {
+                let style = base.patch(s.style);
+                s.style(style)
+            }));
+            for row in wrap(&Line::from(spans), 2 + bars_width, width).rows {
+                out.push_line(row);
+                out.actions.push(action.clone());
+            }
+        }
+        out.push_line(with_bars(render_fence_close()));
+        out.actions.push(None);
+        out
     }
 
     /// The same document with images sized for cells of `cell` pixels, or
@@ -138,9 +245,6 @@ impl<'a> Doc<'a> {
     pub(super) fn with_selection(mut self, selection: Option<(Pos, Pos)>) -> Self {
         if selection.is_some() {
             self.selection = selection;
-            let (cursor, structure) = (self.cursor, &self.structure);
-            let editing = |a, b| touches(cursor, selection, a, b);
-            self.highlighted = highlight_code_blocks(self.lines, structure, editing);
         }
         self
     }
@@ -230,12 +334,12 @@ impl<'a> Doc<'a> {
             .resolver
             .resolve(links.from, path)
             .ok()
-            .and_then(|file| links.resolver.load(&file))
-            .and_then(|lines| match heading {
-                Some(h) => section(&lines, h),
-                None => Some(lines.to_vec()),
-            });
+            .and_then(|file| links.resolver.embed(&file, heading));
         let mut out = Wrapped::empty();
+        // Another kind of file the host doesn't show: the line as it is.
+        if content.is_none() && !crate::links::is_note_path(path) {
+            return None;
+        }
         let Some(content) = content else {
             out.push_line(Line::from(Span::styled(
                 format!("╭─ ⚠ {title} (not found)"),
@@ -246,7 +350,9 @@ impl<'a> Doc<'a> {
         };
         out.push_line(Line::from(Span::styled(format!("╭─ ⧉ {title}"), dim)));
         let no_folds = HashMap::new();
-        let inner = Doc::new(&content, None, self.options, &no_folds, None);
+        // The host's code blocks render in embeds too (a base, a query).
+        let inner =
+            Doc::new(&content, None, self.options, &no_folds, None).with_processor(self.processor);
         for k in 0..content.len() {
             for row in inner.rows(k, width.saturating_sub(2)).rows {
                 let mut spans = vec![Span::styled("│ ", dim)];
@@ -269,6 +375,14 @@ impl<'a> Doc<'a> {
             return wrap(&r.line, r.indent, width);
         }
         if structure.hiding(i, self.folds).next().is_some() {
+            return Wrapped::empty();
+        }
+        // A host's code block: its rendering on the opening line; the rest
+        // of the block has no rows of its own.
+        if let Some((processor, start, end)) = self.processed_block(i) {
+            if i == start {
+                return self.processed_rows(processor, start, end, width);
+            }
             return Wrapped::empty();
         }
         // Tables (B-11): rows aren't wrapped; borders above and below.
@@ -297,7 +411,7 @@ impl<'a> Doc<'a> {
         }
         if !self.active(i)
             && structure.context[i] == LineContext::Normal
-            && let Some(Link::File { path, heading }) = embed_target(&lines[i])
+            && let Some(Link::File { path, heading }) = crate::links::any_embed_target(&lines[i])
             && let Some(rows) = self.embed_rows(&path, heading.as_deref(), width)
         {
             return rows;
@@ -342,16 +456,61 @@ impl<'a> Doc<'a> {
         rows
     }
 
-    /// The highlighted pieces of fenced code line `i`, if its block has them.
-    fn highlighted_line(&self, i: usize) -> Option<&Vec<(Style, String)>> {
-        let k = self.highlighted.partition_point(|&(first, _)| first <= i);
-        let (first, block) = self.highlighted.get(k.checked_sub(1)?)?;
-        block.get(i - first)
+    /// Fenced code line `i`'s block, highlighted, and the line's index in
+    /// it; `None` for an unknown language or a block being edited.
+    fn highlighted_line(&self, i: usize) -> Option<(Arc<Highlighted>, usize)> {
+        let (open, _) = self.structure.reveal_group(i)?;
+        let LineContext::FenceOpen { lang } = &self.structure.context[open] else {
+            return None;
+        };
+        let block = self
+            .highlighted
+            .borrow_mut()
+            .entry(open)
+            .or_insert_with(|| {
+                let (start, end) = self.structure.reveal_group(open)?;
+                if touches(self.cursor, self.selection, start, end) {
+                    return None;
+                }
+                let body: Vec<&str> = (open + 1..self.lines.len())
+                    .take_while(|&k| self.structure.context[k] == LineContext::FenceBody)
+                    .map(|k| self.lines[k].as_str())
+                    .collect();
+                highlight_cached(lang, &body)
+            })
+            .clone()?;
+        Some((block, i - open - 1))
+    }
+
+    /// Renders line `i`: [`Doc::render_line`], with its links to missing
+    /// notes dimmed (K-11) when the document knows where links point.
+    fn view(&self, i: usize) -> Rendered {
+        let line = &self.lines[i];
+        let missing: Vec<String> = match self.links {
+            Some(links) if line.contains("[[") => crate::links::all_links(line)
+                .into_iter()
+                .filter_map(|(link, _)| match link {
+                    crate::links::Link::File { path, heading } => Some((path, heading)),
+                    crate::links::Link::Web(_) => None,
+                })
+                .filter(|(path, _)| !path.is_empty())
+                .filter(|(path, _)| !links.resolver.exists(links.from, path))
+                .map(|(path, heading)| match heading {
+                    Some(h) => format!("{path}#{h}"),
+                    None => path,
+                })
+                .collect(),
+            _ => Vec::new(),
+        };
+        if missing.is_empty() {
+            return self.render_line(i);
+        }
+        crate::markdown::with_missing(missing, || self.render_line(i))
     }
 
     /// Renders line `i`. The cursor line is shown raw; so is every line of a
     /// reveal group (frontmatter, fenced code) that contains the cursor.
-    fn view(&self, i: usize) -> Rendered {
+    fn render_line(&self, i: usize) -> Rendered {
         let (lines, structure) = (self.lines, &self.structure);
         let line = &lines[i];
         let revealed = match structure.reveal_group(i) {
@@ -363,11 +522,21 @@ impl<'a> Doc<'a> {
         }
         match &structure.context[i] {
             LineContext::Normal => render_with(line, &self.options),
-            LineContext::Frontmatter => render_frontmatter_line(line).into(),
+            LineContext::Frontmatter => {
+                // The key a `- item` line belongs to: the last one above it.
+                let owner = lines[..i]
+                    .iter()
+                    .rev()
+                    .find(|l| !l.starts_with([' ', '\t']) && !l.trim_start().starts_with("- "))
+                    .and_then(|l| l.split_once(':'))
+                    .map(|(k, _)| k.trim());
+                render_frontmatter_line(line, owner).into()
+            }
+            LineContext::Comment => render_comment_line(line).into(),
             LineContext::FenceOpen { lang } => render_fence_open(lang).into(),
             LineContext::FenceBody => match self.highlighted_line(i) {
-                Some(pieces) => render_code_pieces(pieces),
-                None => render_code_line(line),
+                Some((block, k)) if k < block.len() => render_code_pieces(&block[k]),
+                _ => render_code_line(line),
             },
             LineContext::FenceClose => render_fence_close().into(),
             LineContext::Quote { callouts, code } => render_quote(line, callouts, code.as_ref()),
@@ -385,7 +554,9 @@ impl<'a> Doc<'a> {
             }
             LineContext::IndentedCode => render_code_line(dedent_code(line)),
             LineContext::LinkDefinition => render_link_definition(line).into(),
-            LineContext::ListContinuation { owner } => render_continuation(line, &lines[*owner]),
+            LineContext::ListContinuation { owner } => {
+                render_continuation(line, &lines[*owner], &self.options)
+            }
             LineContext::SetextHeading { level } => {
                 let heading = format!("{} {}", "#".repeat(*level as usize), line.trim());
                 render_with(&heading, &self.options)
@@ -437,37 +608,6 @@ fn restyle_chars(
     }
     spans.retain(|s| !s.content.is_empty());
     line.spans = spans;
-}
-
-/// Highlights every fenced code block whose language is known (B-09),
-/// except those being edited (shown raw), in document order by first body
-/// line. Results are cached by block text and shared, so unchanged blocks
-/// cost nothing on later frames.
-fn highlight_code_blocks(
-    lines: &[String],
-    structure: &Structure,
-    editing: impl Fn(usize, usize) -> bool,
-) -> Vec<(usize, Arc<Highlighted>)> {
-    let mut out = Vec::new();
-    for (open, context) in structure.context.iter().enumerate() {
-        let LineContext::FenceOpen { lang } = context else {
-            continue;
-        };
-        if structure
-            .reveal_group(open)
-            .is_some_and(|(a, b)| editing(a, b))
-        {
-            continue;
-        }
-        let body: Vec<&str> = (open + 1..lines.len())
-            .take_while(|&k| structure.context[k] == LineContext::FenceBody)
-            .map(|k| lines[k].as_str())
-            .collect();
-        if let Some(pieces) = highlight_cached(lang, &body) {
-            out.push((open + 1, pieces));
-        }
-    }
-    out
 }
 
 /// An indented code line without its 4 columns of indentation.

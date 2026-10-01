@@ -68,7 +68,7 @@ line shows as raw Markdown).
 
 Plain characters are typed as-is. Special keys: `<Enter> <Tab> <S-Tab> <BS>
 <Del> <Up> <Down> <Left> <Right> <Home> <End> <PgUp> <PgDn> <F3> <S-F3>
-<Esc> <lt>` (a literal `<`), `<C-x>` for Ctrl+x, `<S-…>` for a key with
+<Esc> <lt>` (a literal `<`), `<C-x>` for Ctrl+x, `<A-x>` for Alt+x, `<S-…>` for a key with
 Shift (`<S-Left>`, `<S-F3>`), and `<paste:text>` for pasted text. Key scripts run with a
 screen of 80 × 10 text rows. Newlines are ignored, and lines starting with `//` are
 comments.

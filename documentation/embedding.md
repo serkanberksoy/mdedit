@@ -24,10 +24,11 @@ must use the same ratatui version.
 
 | Type | One per | What it holds |
 |------|---------|---------------|
-| `shared::Shared` | program | `config` (settings), `caps` (terminal colors and Unicode), `picker` + `image_cache` (images), `recent` (emoji), `resolver` (link targets) |
+| `shared::Shared` | program | `config` (settings), `caps` (terminal colors and Unicode), `picker` + `image_cache` (images), `recent` (emoji), `resolver` (link targets), `processor` (the host's code blocks), `clipboard` (where Ctrl+V reads from) |
 | `view::EditorView` | open document (tab, pane) | text, cursor, selection, undo history, folds, scroll, source mode, search / replace / emoji prompts, status message |
 | `ui::EditorWidget` | frame | draws a view into any `Rect` |
 | `resolver::Resolver` | program | trait: finds link, embed and image targets |
+| `processor::CodeBlockProcessor` | program | trait, optional: renders fenced blocks of the host's languages |
 
 ## Setup, once per program
 
@@ -68,12 +69,48 @@ match view.handle_key(key, &mut shared) {
     Outcome::RequestOpen => { /* focus the file list */ }
     Outcome::RequestSaveAs => { /* ask for a name, then view.save_as(path) */ }
     Outcome::RequestClose => { /* if view.is_dirty(), ask to save; then close the tab */ }
+    Outcome::Action(action) => { /* a code block result row's action (view mode, clicks) */ }
+    Outcome::OpenUrl(url) => { /* a web link: open it in a browser (or say why not) */ }
+    Outcome::MissingLink { target, heading } => { /* a link to a missing note: offer to create it */ }
+    _ => {}                          // `Outcome` is non-exhaustive: new outcomes may come
 }
 ```
 
 The view handles everything else itself: editing, selection, undo, search
 and replace, folding, the emoji picker, Ctrl+S for a document that has a
 file, and links to headings in the same note.
+
+## Mouse clicks
+
+```rust
+// A left click at (column, row): follows a link, an embed, an image or a
+// code block result row under it (and moves the row cursor in view mode);
+// anywhere else in the text it places the cursor.
+match view.click(Position::new(x, y), &mut shared) {
+    Outcome::Ignored => { /* outside the text: the host's */ }
+    other => { /* handle like a key's outcome (Consumed: the cursor moved) */ }
+}
+```
+
+The view remembers where it drew each row (`screen_rows`, `text_area`),
+so call it after a frame. On the line being edited (raw text) and in
+source mode the cursor goes to the clicked column; on a rendered line to
+where the clicked text is in the source (hidden markup and glyphs lined
+up). A selection ends.
+
+The mouse wheel: `view.scroll_rows(3)` (or `-3`) scrolls the live preview
+by screen rows without moving the cursor, through a tall rendered block
+too (a query's long result) instead of into its source; the next key or
+paste goes back to the cursor. In view mode, send Up / Down instead (its
+row cursor moves).
+
+## View mode
+
+`view.reading` is view mode (V-12, Alt+V cycles the
+modes, `view.enter_reading()` turns it on): read-only, every line
+rendered, a row cursor over rendered rows, Tab / Enter follow links. A
+code block processor gives its rows actions with `render_rows`; Enter or a
+click on such a row returns `Outcome::Action(action)`.
 
 ## Drawing
 
@@ -99,6 +136,24 @@ terminal.draw(|frame| {
   terminal sizes whole rows), so they're off in a narrower area.
 - Only draw the visible tabs: the caches (block structure, highlighting,
   embeds, images) are shared by content, so switching tabs is cheap.
+- A theme: `shared.palette` swaps the colors the editor draws with, like a
+  terminal color scheme: each of the 16 named colors (`palette.set(Color::
+  LightBlue, link_color)`), the default text (`palette.text`) and the
+  background (`palette.background`, e.g. a light page on a dark terminal).
+  The default changes nothing; `apply_terminal_workarounds` fits the
+  result to the terminal's colors.
+- Your own inline syntax: `mdedit::markdown::set_verbatim(&[("<%", "%>")])`
+  shows text from each opening marker to its closing one as written (the
+  markers too), in the code color, without reading Markdown in it (a
+  template language's tags). Set it once on the thread that draws; `&[]`
+  turns it off.
+- Your own text beside links and in place of spans:
+  `markdown::set_link_badge(Some(Rc::new(|target| …)))` shows a short text
+  dimmed after a wiki link (how many notes link to it), and
+  `markdown::set_rendered(vec![("[@".into(), "]".into(), Rc::new(|key| …))])`
+  shows what the function gives for the text between the markers (a
+  citation as `Doe 2020`), in a link's color; `None` from either leaves
+  things as they are. Both are asked while drawing: keep them quick.
 
 ## Resolving links in a vault
 
@@ -109,14 +164,42 @@ impl mdedit::resolver::Resolver for MyVaultResolver {
     fn resolve(&self, from: Option<&Path>, target: &str) -> Result<PathBuf, String> {
         // `[[Note]]` by name anywhere in the vault; Err explains, for the status line.
     }
-    // Optional: `exists` (unresolved-link styling) and `load` (embed
-    // content from your own cache); both have defaults.
+    // Optional: `exists` (links to missing notes are dimmed; it's asked
+    // for every wiki link drawn, so make it quick), `load` (embed
+    // content from your own cache) and `embed` (what `![[file#part]]`
+    // shows: other kinds of files too, e.g. a code block your processor
+    // renders); all have defaults.
 }
 ```
+
+A host can fill a margin left of the text (Git change marks, line authors):
+`view.margin_width = 2; view.margin.insert(line, Line::from("+"))`. The
+text, the cursor and clicks move right by its width.
+
+A document without a file (a host's help page, a diff) can have a name:
+`view.name = Some("Help".into())`; `title()` and the status line use it.
 
 The resolver is used by Ctrl+Enter (`Outcome::OpenLink`), note embeds
 (`![[Note]]`, `![[Note#Heading]]`) and image embeds (`![[photo.png]]`).
 mdedit's own `RelativeResolver` looks next to the current note.
+
+## Rendering a host's code blocks
+
+```rust
+struct Queries { /* … */ }
+
+impl mdedit::processor::CodeBlockProcessor for Queries {
+    fn handles(&self, lang: &str) -> bool { lang == "dataview" }
+    fn render(&self, lang: &str, source: &[String], from: Option<&Path>, width: usize)
+        -> Vec<Line<'static>> { /* run the query; cache it, this runs every frame */ }
+}
+
+shared.processor = Some(Box::new(Queries { /* … */ }));
+```
+
+A ```` ```dataview ```` block then shows what `render` returns, in the
+block's frame; with the cursor or a selection in the block, its source is
+shown to edit it. Blocks in other languages are shown as code.
 
 ## What stays in the mdedit program
 

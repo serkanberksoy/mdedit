@@ -27,6 +27,9 @@ pub struct Editor {
     pub id: u64,
     /// Where the selection started (V-19); it runs to the cursor.
     pub anchor: Option<(usize, usize)>,
+    /// Spaces Tab indents (`indent_width` in the settings; the view sets
+    /// it).
+    pub indent_width: usize,
 }
 
 fn byte_idx(s: &str, col: usize) -> usize {
@@ -128,6 +131,7 @@ impl Editor {
             id: NEXT_ID.fetch_add(1, Ordering::Relaxed),
             crlf: text.find('\n').is_some_and(|i| text[..i].ends_with('\r')),
             final_newline: text.is_empty() || text.ends_with('\n'),
+            indent_width: crate::markdown::DEFAULT_INDENT,
             ..Default::default()
         }
     }
@@ -234,7 +238,7 @@ impl Editor {
                 }
                 _ => continue, // continuation text or a blank line
             };
-            let level = nesting(&self.lines[r][..indent]);
+            let level = nesting(&self.lines[r][..indent], self.indent_width);
             let continues = open.iter().any(|&(l, _, _)| l == level);
             open.retain(|&(l, _, _)| l <= level);
             if !is_ordered(&marker) {
@@ -417,9 +421,10 @@ impl Editor {
     }
 
     /// Tab on a bullet or task line nests it one level deeper, using a tab if
-    /// the line is already tab-indented and 2 spaces otherwise. Elsewhere it
-    /// inserts 2 spaces.
+    /// the line is already tab-indented and [`Editor::indent_width`] spaces
+    /// otherwise. Elsewhere it inserts that many spaces.
     pub fn indent(&mut self) {
+        let spaces = " ".repeat(self.indent_width.max(1));
         if let Block::Bullet { indent, .. } | Block::Task { indent, .. } =
             parse_line(self.current())
         {
@@ -427,7 +432,7 @@ impl Editor {
             let unit = if self.lines[row][..indent].contains('\t') {
                 "\t"
             } else {
-                "  "
+                spaces.as_str()
             };
             self.lines[row].insert_str(0, unit);
             self.col += unit.len();
@@ -435,8 +440,9 @@ impl Editor {
             self.restart_numbering();
             self.renumber();
         } else {
-            self.insert_char(' ');
-            self.insert_char(' ');
+            for _ in 0..spaces.len() {
+                self.insert_char(' ');
+            }
         }
     }
 
@@ -450,7 +456,10 @@ impl Editor {
             let n = if ws.starts_with('\t') {
                 1
             } else {
-                ws.chars().take_while(|&c| c == ' ').count().min(2)
+                ws.chars()
+                    .take_while(|&c| c == ' ')
+                    .count()
+                    .min(self.indent_width.max(1))
             };
             if n > 0 {
                 self.lines[row].drain(..n);
@@ -617,6 +626,29 @@ mod tests {
         ed.outdent();
         assert_eq!(ed.lines[2], "* c");
         assert_eq!(ed.col, 3);
+    }
+
+    #[test]
+    fn indentation_width_is_a_setting() {
+        let mut ed = Editor::from_text("- a\n- b");
+        assert_eq!(ed.indent_width, 2, "the default");
+        ed.indent_width = 4;
+        ed.row = 1;
+        ed.indent();
+        assert_eq!(ed.lines, ["- a", "    - b"]);
+        assert_eq!(ed.col, 4);
+        ed.indent();
+        assert_eq!(ed.lines[1], "        - b");
+        ed.outdent();
+        assert_eq!(ed.lines[1], "    - b", "one level: 4 spaces");
+        ed.outdent();
+        assert_eq!(ed.lines[1], "- b");
+        // Outside a list, Tab inserts that many spaces.
+        let mut text = Editor::from_text("x");
+        text.indent_width = 4;
+        text.col = 1;
+        text.indent();
+        assert_eq!(text.lines, ["x    "]);
     }
 
     #[test]

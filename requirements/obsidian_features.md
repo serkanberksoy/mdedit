@@ -74,8 +74,8 @@ each milestone contains and the order of work.
 | K-08 | Autolink | `<https://…>` | ✅ | S | M2 | Also `<mailto:…>` and `<me@example.com>`; shown without the angle brackets |
 | K-09 | Bare URL | `https://…` | ✅ | S | M2 | Underlined; clickable via OSC 8 still open (R-11) |
 | K-10 | Obsidian URI | `obsidian://open?…` | ⬜ | S | Dropped | Not needed (decided 2026-09-27): `obsidian://` URIs belong to the Obsidian app, not a single-file editor |
-| K-11 | Unresolved link styling | link to a note that doesn't exist | ⬜ | L | Wrapper | Wrapper project: needs a vault index |
-| K-12 | Follow link | Ctrl+Enter (or Alt+Enter) on a link | ✅ | L | M2 | Ctrl+Enter / Alt+Enter: wiki and Markdown links, #Heading jumps; relative to the current file (no vault); save prompt first |
+| K-11 | Unresolved link styling | link to a note that doesn't exist | ✅ | L | M2 | 3.12.0: a wiki link whose target the resolver can't find is dimmed (relative to the file here; a host's `Resolver` decides in a vault) |
+| K-12 | Follow link | Ctrl+Enter (or Alt+Enter) on a link | ✅ | L | M2 | Ctrl+Enter / Alt+Enter: wiki and Markdown links, #Heading jumps; relative to the current file (no vault); save prompt first; 3.2.0: web links and links to missing files come back to the host (`Outcome::OpenUrl`, `Outcome::MissingLink`) |
 | K-13 | Link autocomplete | suggestions after typing `[[` | ⬜ | L | Wrapper | Wrapper project: needs a vault index of note names |
 
 ## 4. Embeds (transclusion)
@@ -84,7 +84,7 @@ each milestone contains and the order of work.
 |----|---------|--------|-----|--------|-----------|-------|
 | E-01 | Embed note | `![[Note]]` | ✅ | L | M3 | Relative to the current file (no vault); framed; the link while the cursor is on it; cached until the file changes |
 | E-02 | Embed heading section | `![[Note#Heading]]` | ✅ | L | M3 | The section under that heading, up to the next heading of the same or a higher level |
-| E-03 | Embed block | `![[Note#^block-id]]` | ⬜ | L | Wrapper | Wrapper project: shows another note's block |
+| E-03 | Embed block | `![[Note#^block-id]]` | ✅ | L | M3 | 3.7.0: the paragraph or list item a `^id` ends (an id on its own line: the block above it, e.g. a table); `[[Note#^id]]` goes to its line. The host's resolver finds the note |
 | E-04 | Embed image | `![[img.png]]`, `![alt](url)` | ✅ | L | M3 | Terminal: kitty/sixel/iTerm image protocols, or a `🖼 img.png` placeholder |
 | E-05 | Image size | `![[img.png\|200]]`, `\|200x100`, `![alt\|200](url)` | ✅ | L | M3 | |
 | E-06 | Embed audio / video | `![[clip.mp3]]`, `![[clip.mp4]]` | ⬜ | S | M3 | Terminal: placeholder only |
@@ -114,12 +114,12 @@ each milestone contains and the order of work.
 
 | ID | Feature | Syntax | Now | Effort | Milestone | Notes |
 |----|---------|--------|-----|--------|-----------|-------|
-| P-01 | Frontmatter / properties | `---` YAML `---` at top of file | 🟡 | M | M3 | Dimmed; raw when the cursor is inside |
-| P-02 | Property types | text, list, number, checkbox, date, date & time | ⬜ | M | M3 | e.g. show a checkbox as ☑, a list as chips |
-| P-03 | Special properties | `tags`, `aliases`, `cssclasses` | ⬜ | M | M3 | |
+| P-01 | Frontmatter / properties | `---` YAML `---` at top of file | ✅ | M | M3 | 3.6.0: each property as its key and typed value; the `---` lines as rules; raw while the cursor is in it |
+| P-02 | Property types | text, list, number, checkbox, date, date & time | ✅ | M | M3 | 3.6.0: text (links and tags styled), a list as chips, a number, a checkbox ☑ / ☐, a date or date and time |
+| P-03 | Special properties | `tags`, `aliases`, `cssclasses` | 🟡 | M | M3 | 3.6.0: `tags` as tags, `aliases` and `cssclasses` as chips; what they do is the host's (blackglass uses aliases) |
 | P-04 | Collapse properties | `▸ Properties (n)` | ⬜ | M | M3 | R-05 |
 | P-05 | Inline tags | `#tag`, `#nested/tag` | ✅ | S | M3 | One color for all tags; per-prefix colors open (R-12) |
-| P-06 | Tags in frontmatter | `tags: [a, b]` or a YAML list | ⬜ | M | M3 | Style as tags |
+| P-06 | Tags in frontmatter | `tags: [a, b]` or a YAML list | ✅ | M | M3 | 3.6.0: `tags: [a, b]`, `tags: a b` and a YAML list, each as a tag |
 
 ## 7. Math, diagrams, footnotes, comments, HTML
 
@@ -128,11 +128,11 @@ each milestone contains and the order of work.
 | X-01 | Inline math | `$e = mc^2$` | ⬜ | M | M3 | Terminal: convert LaTeX to Unicode (`e = mc²`) |
 | X-02 | Block math | `$$ … $$` | ⬜ | M | M3 | Unicode approximation, or show as code |
 | X-03 | Mermaid diagrams | ```` ```mermaid ```` | ⬜ | L | M3 | Terminal: show as code, or ASCII rendering |
-| X-04 | Footnote reference | `text[^1]` | ⬜ | S | M3 | Show as superscript `¹` |
-| X-05 | Footnote definition | `[^1]: note` | ⬜ | M | M3 | |
-| X-06 | Inline footnote | `text^[inline note]` | ⬜ | S | M3 | |
-| X-07 | Comment (inline) | `%%hidden%%` | ⬜ | S | M3 | Hidden in Obsidian's reading view; dim here |
-| X-08 | Comment (block) | `%%` … `%%` across lines | ⬜ | M | M3 | |
+| X-04 | Footnote reference | `text[^1]` | ✅ | S | M3 | 3.5.0: `[label]` in the footnote color (no superscript digits: they have no ASCII fallback) |
+| X-05 | Footnote definition | `[^1]: note` | ✅ | M | M3 | 3.5.0: `[label]` then its text; not a link definition |
+| X-06 | Inline footnote | `text^[inline note]` | ✅ | S | M3 | 3.5.0: `[text]` in the footnote color |
+| X-07 | Comment (inline) | `%%hidden%%` | ✅ | S | M3 | 3.5.0: dimmed italic, the `%%` hidden (Obsidian hides comments in reading view; here they stay visible, dimmed) |
+| X-08 | Comment (block) | `%%` … `%%` across lines | ✅ | M | M3 | 3.5.0: from a `%%` line to the next, dimmed; raw as a block while editing |
 | X-09 | Inline HTML | `<u>`, `<sub>`, `<sup>`, `<kbd>`, `<mark>`, `<br>` | ⬜ | S | M3 | Map to terminal styles where possible |
 | X-10 | Block HTML | `<details>`, `<div>`, `<iframe>`, … | ⬜ | M | M3 | Terminal: show raw or dimmed |
 
@@ -152,7 +152,7 @@ Not syntax, but part of what makes Obsidian feel the way it does.
 |----|---------|----------|-----|--------|-----------|-------|
 | V-01 | Show raw syntax under cursor | formatted everywhere else | ✅ | S | M1 | By design the whole cursor line is raw (and every selected line); mdedit doesn't follow Obsidian's element-by-element reveal |
 | V-02 | List / task continuation | Enter continues, Enter on an empty item ends the list | ✅ | S | M1 | |
-| V-03 | Indent / outdent | Tab / Shift-Tab on list items | ✅ | S | M1 | |
+| V-03 | Indent / outdent | Tab / Shift-Tab on list items | ✅ | S | M1 | 3.1.0: the width is a setting, `indent_width` (1 to 8 spaces, default 2); list levels and indent guides follow it |
 | V-04 | Auto-pair | typing `(`, `[`, `` ` ``, `**`, `==` inserts the closing pair | ✅ | S | M1 | Closers step over, Backspace deletes an empty pair, no pair right before a word; `auto_pair = "off"` in config.toml |
 | V-05 | Wrap selection | select text, type `*` → `*text*` | ✅ | M | M1 | Shift + arrows select (V-19); `*`, `_`, `~`, `=`, backtick and `"` wrap, `(`, `[`, `{` wrap with their closers; the text stays selected |
 | V-06 | Fold headings | collapse a section under a heading | ✅ | M | M1 | Ctrl+K folds a heading's section; `▸ N lines` shows it's folded |
@@ -161,8 +161,8 @@ Not syntax, but part of what makes Obsidian feel the way it does.
 | V-09 | Paste URL over selection | turns the selection into `[selection](url)` | ✅ | M | M1 | http(s) URLs; other pastes replace the selection |
 | V-10 | Tag / property autocomplete | suggestions after `#` / in frontmatter | ⬜ | L | Wrapper | Wrapper project: suggestions come from the whole vault |
 | V-11 | Toggle checkbox | click or key flips `[ ]` ↔ `[x]` | ✅ | S | M1 | Ctrl+L |
-| V-12 | Reading view | fully rendered, read-only mode | ⬜ | S | Dropped | Not needed (decided 2026-09-27): live preview + source mode (V-13) cover it |
-| V-13 | Source mode | plain Markdown, no rendering | ✅ | S | M1 | Ctrl+V toggles; every line raw (markers dimmed, headings colored), no folds/embeds/tables; `-t` starts in it |
+| V-12 | Reading view | fully rendered, read-only mode | ✅ | S | M1 | View mode (3.0.0): Alt+V cycles live preview → source → view; every line rendered, a row cursor over rendered rows (embeds and code block results too), Tab / Enter / click follow links, Esc edits |
+| V-13 | Source mode | plain Markdown, no rendering | ✅ | S | M1 | Alt+V (since 3.0.0; Ctrl+V and Ctrl+Shift+V paste); every line raw (markers dimmed, headings colored), no folds/embeds/tables; `-t` starts in it |
 | V-15 | Page Up / Page Down | PgUp / PgDn | ✅ | S | M1 | A screen of rows minus one; view scrolls with it; keeps the column |
 | V-16 | Search | Ctrl+F; F3 / Shift+F3 next / previous | ✅ | M | M1 | Ctrl+F jumps as you type; ↓/↑ or F3/Shift+F3 next/previous; Enter keeps, Esc goes back; smart case; wraps |
 | V-20 | Highlight search matches | every match on screen while Ctrl+F / Ctrl+H is open | ✅ | S | M1 | Found in the text as shown (rendered headings, hidden markup); the match at the cursor in a stronger color; cleared when the prompt closes |

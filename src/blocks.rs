@@ -50,6 +50,8 @@ pub enum LineContext {
     IndentedCode,
     /// A link reference definition, `[label]: url` (K-07).
     LinkDefinition,
+    /// A line of a `%%` … `%%` comment block (X-08), its `%%` lines too.
+    Comment,
     /// A row of table `table` (index into `Structure::tables`; B-11).
     TableRow {
         table: usize,
@@ -267,6 +269,23 @@ pub fn analyze(lines: &[String]) -> Structure {
     };
     while i < lines.len() {
         let line = &lines[i];
+        // A comment block (X-08): from a `%%` line to the next.
+        if line.trim() == "%%" {
+            let start = i;
+            s.context[i] = LineContext::Comment;
+            i += 1;
+            while i < lines.len() && lines[i].trim() != "%%" {
+                s.context[i] = LineContext::Comment;
+                i += 1;
+            }
+            let end = i.min(lines.len() - 1);
+            s.context[end] = LineContext::Comment;
+            s.reveal_groups.push((start, end));
+            end_code(&mut s, &mut code_block);
+            item = None;
+            i += 1;
+            continue;
+        }
         if let Some((ch, len, info)) = fence_open(line) {
             let lang = info
                 .split_whitespace()
@@ -298,6 +317,8 @@ pub fn analyze(lines: &[String]) -> Structure {
         let after_break = i == 0
             || lines[i - 1].trim().is_empty()
             || s.context[i - 1] == LineContext::IndentedCode;
+        // Parsed once: lists and quotes below both need it.
+        let parsed = parse_line(line);
         if line.starts_with('>') {
             item = None;
             end_code(&mut s, &mut code_block);
@@ -309,7 +330,7 @@ pub fn analyze(lines: &[String]) -> Structure {
             code_block = Some((code_block.map_or(i, |(start, _)| start), i));
         } else {
             end_code(&mut s, &mut code_block);
-            if matches!(parse_line(line), Block::Bullet { .. } | Block::Task { .. }) {
+            if matches!(parsed, Block::Bullet { .. } | Block::Task { .. }) {
                 item = Some(i);
             } else if let Some(owner) = item.filter(|_| line.starts_with([' ', '\t'])) {
                 s.context[i] = LineContext::ListContinuation { owner };
@@ -318,7 +339,7 @@ pub fn analyze(lines: &[String]) -> Structure {
             }
         }
 
-        match parse_line(line) {
+        match parsed {
             Block::Quote { depth, text } => {
                 callouts.truncate(depth);
                 callouts.resize(depth, None);
@@ -393,9 +414,9 @@ pub fn analyze(lines: &[String]) -> Structure {
     while i + 1 < lines.len() {
         let normal = |s: &Structure, k: usize| s.context[k] == LineContext::Normal;
         let header = &lines[i];
-        let columns = table_separator(&lines[i + 1]);
-        if !(normal(&s, i) && normal(&s, i + 1) && header.contains('|'))
-            || columns != Some(table_cells(header).len())
+        // The cheap checks first: most lines have no pipe.
+        if !(header.contains('|') && normal(&s, i) && normal(&s, i + 1))
+            || table_separator(&lines[i + 1]) != Some(table_cells(header).len())
         {
             i += 1;
             continue;
@@ -437,8 +458,8 @@ pub fn analyze(lines: &[String]) -> Structure {
         let normal = |k: usize| s.context[k] == LineContext::Normal;
         if normal(i)
             && normal(i + 1)
-            && is_paragraph_text(&lines[i])
             && let Some(level) = setext_underline(&lines[i + 1])
+            && is_paragraph_text(&lines[i])
         {
             let heading = format!("{} {}", "#".repeat(level as usize), lines[i].trim());
             let width = render(&heading).line.width();

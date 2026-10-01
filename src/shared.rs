@@ -5,10 +5,12 @@
 
 use ratatui_image::picker::Picker as ImagePicker;
 
+use crate::clipboard::{Clipboard, SystemClipboard};
 use crate::config::Config;
 use crate::emoji::Recent;
 use crate::images::ImageCache;
 use crate::markdown::Options;
+use crate::processor::CodeBlockProcessor;
 use crate::resolver::{RelativeResolver, Resolver};
 use crate::terminal::Capabilities;
 
@@ -28,6 +30,14 @@ pub struct Shared {
     pub recent: Recent,
     /// How links, embeds and images find their files.
     pub resolver: Box<dyn Resolver>,
+    /// Renders the host's own code blocks (e.g. plugin queries); `None`
+    /// shows every fenced block as code.
+    pub processor: Option<Box<dyn CodeBlockProcessor>>,
+    /// Where Ctrl+V gets its text (the desktop clipboard by default).
+    pub clipboard: Box<dyn Clipboard>,
+    /// A host's colors for the editor (its theme); the default changes
+    /// nothing.
+    pub palette: crate::palette::Palette,
 }
 
 impl Shared {
@@ -40,6 +50,9 @@ impl Shared {
             image_cache: ImageCache::default(),
             recent: Recent::default(),
             resolver: Box::new(RelativeResolver::new()),
+            processor: None,
+            clipboard: Box::new(SystemClipboard),
+            palette: crate::palette::Palette::default(),
         }
     }
 

@@ -182,10 +182,12 @@ impl Browser {
     }
 }
 
-/// Writes `contents` to `path` safely (F-07): into a temporary file in the
-/// same folder, which then replaces `path` in one step, so a failure never
-/// leaves a half-written note. A symbolic link is followed (the link stays)
-/// and an existing file keeps its permissions.
+/// Writes `contents` to `path` safely (F-07): first into a temporary copy
+/// in the same folder (synced to the disk), so a failure never loses the
+/// note. An existing file is then written in place, so it stays the same
+/// file, keeping its creation time (as Obsidian does), its hard links and
+/// its permissions; if that fails, the copy replaces it in one step. A new
+/// file is the copy, renamed. A symbolic link is followed (the link stays).
 pub fn write_atomic(path: &Path, contents: &str) -> std::io::Result<()> {
     use std::io::Write;
     let target = fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
@@ -195,19 +197,39 @@ pub fn write_atomic(path: &Path, contents: &str) -> std::io::Result<()> {
     };
     let name = target.file_name().unwrap_or_default().to_string_lossy();
     let tmp = dir.join(format!(".{name}.mdedit-{}.tmp", std::process::id()));
-    let result = (|| {
+    let existing = fs::metadata(&target).ok().filter(|m| m.is_file());
+    let copied = (|| {
         let mut file = fs::File::create(&tmp)?;
         file.write_all(contents.as_bytes())?;
-        if let Ok(meta) = fs::metadata(&target) {
+        if let Some(meta) = &existing {
             file.set_permissions(meta.permissions())?;
         }
-        file.sync_all()?;
-        fs::rename(&tmp, &target)
+        file.sync_all()
     })();
-    if result.is_err() {
+    if let Err(e) = copied {
+        let _ = fs::remove_file(&tmp);
+        return Err(e);
+    }
+    if existing.is_some() {
+        let in_place = (|| {
+            let mut file = fs::OpenOptions::new()
+                .write(true)
+                .truncate(true)
+                .open(&target)?;
+            file.write_all(contents.as_bytes())?;
+            file.sync_all()
+        })();
+        if in_place.is_ok() {
+            let _ = fs::remove_file(&tmp);
+            return Ok(());
+        }
+    }
+    // A new file, or the file couldn't be written in place: the copy.
+    let renamed = fs::rename(&tmp, &target);
+    if renamed.is_err() {
         let _ = fs::remove_file(&tmp);
     }
-    result
+    renamed
 }
 
 pub fn is_markdown(name: &str) -> bool {

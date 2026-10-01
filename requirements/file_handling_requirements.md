@@ -124,9 +124,13 @@ Status: F-01 ✅ · F-02 ✅ · F-03 ✅ · F-04 ✅ (0.9.0) · F-05 ✅ (0.38.0
     heading opens the file at the top, and the status bar says so.
 
 - **F-07 Safe save** ✅ P1
-  - Saving never leaves a half-written file: the text goes to a temporary
-    file in the same folder, which then replaces the note in one step. A
-    failed save (full disk, no permission) leaves the old file untouched.
+  - Saving never loses the note: the text first goes to a temporary copy
+    in the same folder (synced to the disk). An existing note is then
+    written in place, so it stays the same file: its creation time (as in
+    Obsidian, for `file.ctime`), hard links and permissions are kept (3.10.1;
+    before, the copy replaced it and the creation time became the save's).
+    If that fails, the copy replaces the note in one step. A failed save
+    (full disk, no permission) leaves the old file untouched.
   - The file keeps its line endings (LF or CRLF) and whether it ends with a
     newline; a new file uses LF and ends with one.
   - Saving through a symbolic link writes the file it points to (the link
