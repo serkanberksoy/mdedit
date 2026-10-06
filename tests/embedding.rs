@@ -414,6 +414,11 @@ fn view_mode_moves_over_rendered_rows_and_acts_on_them() {
         draw_view(&mut terminal, &mut shared, &mut view);
     }
     assert_eq!(
+        view.read_action(&shared),
+        Some("pick:pear".into()),
+        "the row's action, without acting"
+    );
+    assert_eq!(
         view.handle_key(enter, &mut shared),
         Outcome::Action("pick:pear".into())
     );
@@ -677,4 +682,29 @@ fn links_to_missing_notes_are_dimmed() {
         style("here and").fg,
         "still a link's color"
     );
+}
+
+#[test]
+fn a_host_hides_lines_until_the_cursor_is_on_them() {
+    let mut shared = Shared::new();
+    mdedit::markdown::set_hidden_lines(Some(std::rc::Rc::new(|line: &str| {
+        line.trim_start().starts_with("<!-- TBLFM:")
+    })));
+    let mut view = EditorView::new("top\n<!-- TBLFM: $2=1 -->\nend", None);
+    let mut terminal = Terminal::new(TestBackend::new(30, 5)).unwrap();
+    let screen = draw_view(&mut terminal, &mut shared, &mut view);
+    assert_eq!(screen[..2], ["top", "end"], "hidden: {screen:?}");
+    // The cursor goes onto it: shown, to edit.
+    view.handle_key(key(KeyCode::Down, KeyModifiers::NONE), &mut shared);
+    let screen = draw_view(&mut terminal, &mut shared, &mut view);
+    assert_eq!(view.editor.row, 1);
+    assert_eq!(
+        screen[..3],
+        ["top", "<!-- TBLFM: $2=1 -->", "end"],
+        "{screen:?}"
+    );
+    mdedit::markdown::set_hidden_lines(None);
+    view.handle_key(key(KeyCode::Down, KeyModifiers::NONE), &mut shared);
+    let screen = draw_view(&mut terminal, &mut shared, &mut view);
+    assert_eq!(screen[1], "<!-- TBLFM: $2=1 -->", "without the hook, shown");
 }

@@ -110,7 +110,7 @@ row cursor moves).
 modes, `view.enter_reading()` turns it on): read-only, every line
 rendered, a row cursor over rendered rows, Tab / Enter follow links. A
 code block processor gives its rows actions with `render_rows`; Enter or a
-click on such a row returns `Outcome::Action(action)`.
+click on such a row returns `Outcome::Action(action)`. `EditorView::read_action(&shared)` tells which action the cursor's row has in view mode without acting (for a host command that works on "the result the cursor is on").
 
 ## Drawing
 
@@ -154,6 +154,10 @@ terminal.draw(|frame| {
   shows what the function gives for the text between the markers (a
   citation as `Doe 2020`), in a link's color; `None` from either leaves
   things as they are. Both are asked while drawing: keep them quick.
+- Lines of your own to hide: `markdown::set_hidden_lines(Some(Rc::new(|line|
+  line.starts_with("<!-- TBLFM:"))))` hides such lines in the live preview
+  and view mode; the cursor still moves onto one, and it shows as written
+  while the cursor is on it.
 
 ## Resolving links in a vault
 

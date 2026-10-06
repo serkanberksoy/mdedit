@@ -377,6 +377,10 @@ impl<'a> Doc<'a> {
         if structure.hiding(i, self.folds).next().is_some() {
             return Wrapped::empty();
         }
+        // A line the host hides, but at the cursor.
+        if self.cursor != Some(i) && crate::markdown::host_hides(&lines[i]) {
+            return Wrapped::empty();
+        }
         // A host's code block: its rendering on the opening line; the rest
         // of the block has no rows of its own.
         if let Some((processor, start, end)) = self.processed_block(i) {

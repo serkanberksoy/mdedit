@@ -1084,6 +1084,25 @@ impl EditorView {
         }
     }
 
+    /// View mode: the host action Enter would give for the row the
+    /// cursor is on (its focused item, or its first), without acting;
+    /// `None` outside view mode or on a row without one.
+    pub fn read_action(&self, shared: &Shared) -> Option<String> {
+        if !self.reading {
+            return None;
+        }
+        let rows = self.rows_of(self.editor.row, shared);
+        let row = rows.get(self.read_row)?;
+        let item = self
+            .read_focus
+            .and_then(|f| row.items.get(f))
+            .or_else(|| row.items.first())?;
+        match &item.action {
+            ui::RowAction::Host(action) => Some(action.clone()),
+            ui::RowAction::Link(_) => None,
+        }
+    }
+
     /// Enter: follows the focused link (or the row's first), or gives the
     /// row's action to the host.
     fn read_activate(&mut self, shared: &Shared) -> Outcome {

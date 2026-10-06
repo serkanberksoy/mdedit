@@ -1,6 +1,6 @@
 # Version history
 
-Current version: **3.14.0**
+Current version: **3.16.0**
 
 ## Versioning rules
 
@@ -28,6 +28,22 @@ Entry format: `## X.Y.Z (YYYY-MM-DD)`, followed by *Added / Changed / Fixed*
 sections that name feature IDs where there are any.
 
 ---
+
+## 3.16.0 (2026-10-06)
+
+### Added
+- **A host's hidden lines** (`markdown::set_hidden_lines`): lines the
+  host names are hidden in the live preview and view mode (for example,
+  a table's formula comment). The cursor still moves onto such a line,
+  and it shows as written while the cursor is there.
+
+## 3.15.0 (2026-10-06)
+
+### Added
+- **The view-mode row's action, for hosts** (`EditorView::read_action`):
+  the host action Enter would give for the row the cursor is on, without
+  acting. A host command can then work on the result at the cursor (for
+  example, postponing the task in a query result).
 
 ## 3.14.0 (2026-10-06)
 

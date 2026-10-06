@@ -119,6 +119,26 @@ fn rendered(rest: &str, spans: &[(String, String, HostText)]) -> Option<(usize, 
     })
 }
 
+/// Which lines a host hides ([`set_hidden_lines`]).
+pub type HostLines = std::rc::Rc<dyn Fn(&str) -> bool>;
+
+thread_local! {
+    /// The host's hidden lines ([`set_hidden_lines`]).
+    static HIDDEN: std::cell::RefCell<Option<HostLines>> = const { std::cell::RefCell::new(None) };
+}
+
+/// Lines the host hides in the live preview and view mode (a table's
+/// formula comment): they take no rows until the cursor is on them, when
+/// they show as written. For the thread that draws; `None` turns it off.
+pub fn set_hidden_lines(hide: Option<HostLines>) {
+    HIDDEN.with(|h| *h.borrow_mut() = hide);
+}
+
+/// Whether the host hides `line` ([`set_hidden_lines`]).
+pub(crate) fn host_hides(line: &str) -> bool {
+    HIDDEN.with(|h| h.borrow().as_ref().is_some_and(|hide| hide(line)))
+}
+
 /// The length of the verbatim span `rest` starts with, if it does.
 fn verbatim_len(rest: &str, pairs: &[(String, String)]) -> Option<usize> {
     pairs.iter().find_map(|(open, close)| {
