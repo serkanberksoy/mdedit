@@ -15,7 +15,7 @@ mdedit --help                 # all options, keys and settings
 Type to edit, move with the arrows. **Ctrl+S** saves, **Ctrl+X** exits,
 **Ctrl+F** searches, **Ctrl+Z** undoes.
 
-**Version:** 3.13.1 · **Stage:** Milestones 1 (core editor) and 2 (links) complete; next: M3 · [Version history](VERSION.md)
+**Version:** 3.14.0 · **Stage:** Milestones 1 (core editor) and 2 (links) complete; next: M3 · [Version history](VERSION.md)
 
 ```
 █ MARCH 14TH, 2026                    ← # heading, rendered

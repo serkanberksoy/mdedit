@@ -23,6 +23,27 @@ const DELIMITERS: &[(&str, Style)] = &[
     ("==", Style::new().fg(Color::Black).bg(Color::Yellow)),
 ];
 
+/// Highlight colors (T-07a): a highlight starting with one of these emoji
+/// (`==🔴text==`) gets that background, and the emoji isn't shown:
+/// (emoji, color, name). Named colors, so a palette can change them.
+pub const HIGHLIGHT_COLORS: [(&str, Color, &str); 6] = [
+    ("🔴", Color::Red, "red"),
+    ("🟠", Color::LightRed, "orange"),
+    ("🟡", Color::Yellow, "yellow"),
+    ("🟢", Color::Green, "green"),
+    ("🔵", Color::Blue, "blue"),
+    ("🟣", Color::Magenta, "purple"),
+];
+
+/// A highlight's color emoji at the start of its `content`: its length
+/// and color (there must be text after it).
+fn highlight_color(content: &str) -> Option<(usize, Color)> {
+    HIGHLIGHT_COLORS.iter().find_map(|&(emoji, color, _)| {
+        let rest = content.strip_prefix(emoji)?;
+        (!rest.is_empty()).then_some((emoji.len(), color))
+    })
+}
+
 thread_local! {
     /// The host's verbatim spans ([`set_verbatim`]).
     static VERBATIM: std::cell::RefCell<std::rc::Rc<Vec<(String, String)>>> =
@@ -346,8 +367,14 @@ fn parse_inline(text: &str, base: Style, out: &mut Vec<Span<'static>>) {
         // Paired markers: the content is parsed again with the added style.
         if let Some((open, close, style)) = delimited(text, i) {
             flush(&mut plain, out);
-            parse_inline(&text[open..close], base.patch(style), out);
-            i = close + (open - i);
+            let marker = open - i;
+            // A highlight's color emoji colors it, unseen (T-07a).
+            let (start, style) = match highlight_color(&text[open..close]) {
+                Some((len, color)) if rest.starts_with("==") => (open + len, style.bg(color)),
+                _ => (open, style),
+            };
+            parse_inline(&text[start..close], base.patch(style), out);
+            i = close + marker;
             continue;
         }
 

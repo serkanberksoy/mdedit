@@ -38,6 +38,7 @@ each milestone contains and the order of work.
 | T-05 | Bold + italic | `***text***` | ✅ | S | M1 | `***` and `___`; nested emphasis combines |
 | T-06 | Strikethrough | `~~text~~` | ✅ | S | M1 | Markers hidden; nests with other markup |
 | T-07 | Highlight | `==text==` | ✅ | S | M1 | Black on yellow; markers hidden |
+| T-07a | Highlight colors | `==🔴text==` (🔴 🟠 🟡 🟢 🔵 🟣) | ✅ | S | M1 | The emoji colors the highlight and isn't shown; named colors (a palette changes them); `markdown::HIGHLIGHT_COLORS` for hosts |
 | T-08 | Inline code | `` `code` `` | ✅ | S | M1 | Code color, backticks hidden, content literal; multi-backtick runs |
 | T-09 | Backslash escapes | `\*`, `\#`, `\|` … | ✅ | S | M1 | ASCII punctuation only; escaped markers don't open or close markup |
 | T-10 | Paragraphs / blank lines | blank line separates paragraphs | ✅ | S | M1 | |

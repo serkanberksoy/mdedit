@@ -1,6 +1,6 @@
 # Version history
 
-Current version: **3.13.1**
+Current version: **3.14.0**
 
 ## Versioning rules
 
@@ -28,6 +28,14 @@ Entry format: `## X.Y.Z (YYYY-MM-DD)`, followed by *Added / Changed / Fixed*
 sections that name feature IDs where there are any.
 
 ---
+
+## 3.14.0 (2026-10-06)
+
+### Added
+- **T-07a Highlight colors**: a highlight starting with a color emoji
+  (`==🔴text==`; 🔴 🟠 🟡 🟢 🔵 🟣) gets that background and the emoji
+  isn't shown, as in Obsidian 1.14. Named colors, so a palette can change
+  them; `markdown::HIGHLIGHT_COLORS` lists them for hosts.
 
 ## 3.13.1 (2026-10-01)
 

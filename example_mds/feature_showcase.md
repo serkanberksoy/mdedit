@@ -4,7 +4,7 @@ status: every implemented feature, in one note
 tags: [showcase, markdown]
 reviewed: true
 created: 2026-06-29
-version: 3.13.1
+version: 3.14.0
 ---
 # mdedit Feature Showcase
 
@@ -46,6 +46,8 @@ A heading directly after text gets a blank row above it:
 
 This is **bold**, __also bold__, *italic*, _also italic_ and ***bold italic***.
 This is ~~struck through~~, this is ==highlighted==, and this is `inline code`.
+Highlights come in colors: ==🔴red==, ==🟠orange==, ==🟡yellow==, ==🟢green==,
+==🔵blue== and ==🟣purple== (the emoji at the start picks it).
 Markup nests: **bold with *italic* inside**, ~~struck with **bold** inside~~.
 Code is literal: `**not bold** [[not a link]] #not-a-tag`, even ``with ` inside``.
 Escapes show the character: \*not italic\*, \#not-a-tag, \[\[not a link\]\].

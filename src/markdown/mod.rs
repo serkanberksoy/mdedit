@@ -637,6 +637,42 @@ mod tests {
     }
 
     #[test]
+    fn highlight_colors() {
+        // A color emoji first colors it (T-07a); the emoji isn't shown.
+        let colored = |c: Color| Style::default().fg(Color::Black).bg(c);
+        assert_eq!(
+            styled("a ==🔴red== ==🟣purple **bold**== b"),
+            [
+                ("a ".into(), Style::default()),
+                ("red".into(), colored(Color::Red)),
+                (" ".into(), Style::default()),
+                ("purple ".into(), colored(Color::Magenta)),
+                (
+                    "bold".into(),
+                    colored(Color::Magenta).add_modifier(Modifier::BOLD)
+                ),
+                (" b".into(), Style::default()),
+            ]
+        );
+        assert_eq!(
+            HIGHLIGHT_COLORS.map(|(e, c, _)| (e, c)),
+            [
+                ("🔴", Color::Red),
+                ("🟠", Color::LightRed),
+                ("🟡", Color::Yellow),
+                ("🟢", Color::Green),
+                ("🔵", Color::Blue),
+                ("🟣", Color::Magenta),
+            ]
+        );
+        assert_eq!(
+            styled("==🔴=="),
+            [("🔴".into(), colored(Color::Yellow))],
+            "only the emoji: a highlight of it"
+        );
+    }
+
+    #[test]
     fn inline_code_is_literal() {
         let code = Style::default().fg(CODE);
         assert_eq!(
