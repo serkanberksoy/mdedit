@@ -119,7 +119,10 @@ row cursor moves).
 modes, `view.enter_reading()` turns it on): read-only, every line
 rendered, a row cursor over rendered rows, Tab / Enter follow links. A
 code block processor gives its rows actions with `render_rows`; Enter or a
-click on such a row returns `Outcome::Action(action)`. `EditorView::read_action(&shared)` tells which action the cursor's row has in view mode without acting (for a host command that works on "the result the cursor is on").
+click on such a row returns `Outcome::Action(action)`. With `render_cells`
+it puts actions on parts of a row instead (by display column: a
+calendar's days); a click on a part returns its action, and in view mode
+Tab goes from part to part. `EditorView::read_action(&shared)` tells which action the cursor's row has in view mode without acting (for a host command that works on "the result the cursor is on").
 
 ## Drawing
 

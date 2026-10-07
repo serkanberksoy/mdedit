@@ -39,9 +39,10 @@ pub struct Wrapped {
     pub attrs: Vec<LineAttr>,
     /// Where an embedded image's pixels go (E-04), drawn over these rows.
     pub image: Option<ImageSlot>,
-    /// A code block processor's action for each row (view mode); empty
-    /// when there are none.
-    pub actions: Vec<Option<String>>,
+    /// A code block processor's actions for each row: (from, to, action)
+    /// by display column (`to` `usize::MAX`: the whole row); empty when
+    /// the line has none.
+    pub actions: Vec<Vec<crate::processor::Part>>,
 }
 
 /// The part of a line's rows that an image covers.

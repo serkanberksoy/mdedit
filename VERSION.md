@@ -1,6 +1,6 @@
 # Version history
 
-Current version: **3.20.0**
+Current version: **3.21.0**
 
 ## Versioning rules
 
@@ -28,6 +28,15 @@ Entry format: `## X.Y.Z (YYYY-MM-DD)`, followed by *Added / Changed / Fixed*
 sections that name feature IDs where there are any.
 
 ---
+
+## 3.21.0 (2026-10-07)
+
+### Added
+- **Actions on parts of a rendered row (for hosts):**
+  `CodeBlockProcessor::render_cells` gives a row actions by display
+  column (a calendar's days); a click on a part gives the host its
+  action, and in view mode Tab goes from part to part. The default puts
+  `render_rows`' action on the whole row, as before.
 
 ## 3.20.0 (2026-10-07)
 

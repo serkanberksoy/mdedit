@@ -112,8 +112,27 @@ pub fn view_rows(view: &EditorView, shared: &Shared, line: usize) -> Vec<ViewRow
         .enumerate()
         .map(|(k, text)| {
             let items = match (w.actions.get(k), &embed) {
-                (Some(Some(action)), _) => vec![whole(text, RowAction::Host(action.clone()))],
-                (Some(None), _) => Vec::new(),
+                (Some(parts), _) if !parts.is_empty() => parts
+                    .iter()
+                    .map(|(from, to, action)| {
+                        let action = RowAction::Host(action.clone());
+                        if *to == usize::MAX {
+                            // The whole row (but its frame).
+                            RowItem {
+                                from: 0,
+                                to: text.width().max(1),
+                                action,
+                            }
+                        } else {
+                            RowItem {
+                                from: *from,
+                                to: *to,
+                                action,
+                            }
+                        }
+                    })
+                    .collect(),
+                (Some(_), _) => Vec::new(),
                 (None, Some(link)) if !w.actions.is_empty() || !text.trim().is_empty() => {
                     vec![whole(text, RowAction::Link(link.clone()))]
                 }
@@ -839,6 +858,67 @@ mod tests {
         assert!(
             rows.iter().any(|r| r.contains("Thing.base › V")),
             "{rows:#?}"
+        );
+    }
+
+    #[test]
+    fn a_host_rows_parts_have_actions_of_their_own() {
+        use crate::processor::CodeBlockProcessor;
+        use crate::view::Outcome;
+        use std::path::Path;
+        struct Days;
+        impl CodeBlockProcessor for Days {
+            fn handles(&self, lang: &str) -> bool {
+                lang == "days"
+            }
+            fn render(
+                &self,
+                _: &str,
+                _: &[String],
+                _: Option<&Path>,
+                _: usize,
+            ) -> Vec<Line<'static>> {
+                vec![Line::raw(" 1   2   3")]
+            }
+            fn render_cells(
+                &self,
+                _: &str,
+                _: &[String],
+                _: Option<&Path>,
+                _: usize,
+            ) -> Vec<crate::processor::CellRow> {
+                vec![(
+                    Line::raw(" 1   2   3"),
+                    vec![(0, 2, "one".into()), (8, 10, "three".into())],
+                )]
+            }
+        }
+        let mut a = app("top\n```days\nq\n```\n");
+        a.shared.processor = Some(Box::new(Days));
+        let (rows, _) = screen(&mut a, 40, 8);
+        let y = rows.iter().position(|r| r.contains(" 1   2   3")).unwrap() as u16;
+        let row = &rows[y as usize];
+        let x0 = row[..row.find(" 1").unwrap()].chars().count() as u16;
+        // "│ " before the row: the parts' columns move with it.
+        let body = a.view.text_area;
+        assert_eq!(x0, body.x + 2, "{rows:#?}");
+        let click = |a: &mut App, x: u16| a.view.click(Position::new(x0 + x, y), &mut a.shared);
+        assert_eq!(click(&mut a, 1), Outcome::Action("one".into()));
+        assert_eq!(click(&mut a, 9), Outcome::Action("three".into()));
+        assert_eq!(click(&mut a, 5), Outcome::Consumed, "2 has none");
+        assert_eq!(a.view.editor.row, 0);
+        // View mode: Tab goes from part to part.
+        let items = view_rows(&a.view, &a.shared, 1);
+        let actions: Vec<_> = items
+            .iter()
+            .flat_map(|r| r.items.iter().map(|i| (i.from, i.action.clone())))
+            .collect();
+        assert_eq!(
+            actions,
+            [
+                (2, RowAction::Host("one".into())),
+                (10, RowAction::Host("three".into()))
+            ]
         );
     }
 

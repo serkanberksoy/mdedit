@@ -185,9 +185,10 @@ impl<'a> Doc<'a> {
         let from = self.links.and_then(|l| l.from);
         let mut out = Wrapped::empty();
         out.push_line(with_bars(render_fence_open(lang)));
-        out.actions.push(None);
+        out.actions.push(Vec::new());
         let inner = width.saturating_sub(2 + bars_width);
-        for (line, action) in processor.render_rows(lang, &source, from, inner) {
+        let shift = 2 + bars_width;
+        for (line, parts) in processor.render_cells(lang, &source, from, inner) {
             let mut spans = bars.clone();
             spans.push(Span::styled("│ ", dim));
             // The line's own style is its spans' base (a host's heading).
@@ -196,13 +197,24 @@ impl<'a> Doc<'a> {
                 let style = base.patch(s.style);
                 s.style(style)
             }));
-            for row in wrap(&Line::from(spans), 2 + bars_width, width).rows {
+            let rows = wrap(&Line::from(spans), 2 + bars_width, width).rows;
+            for (k, row) in rows.into_iter().enumerate() {
+                // The parts' columns after the frame; a part of a wrapped
+                // line stays on its first row, a whole-row action on all.
+                let actions = parts
+                    .iter()
+                    .filter(|&&(_, to, _)| to == usize::MAX || k == 0)
+                    .map(|(from, to, a)| {
+                        let to = if *to == usize::MAX { *to } else { to + shift };
+                        (from + shift, to, a.clone())
+                    })
+                    .collect();
                 out.push_line(row);
-                out.actions.push(action.clone());
+                out.actions.push(actions);
             }
         }
         out.push_line(with_bars(render_fence_close()));
-        out.actions.push(None);
+        out.actions.push(Vec::new());
         out
     }
 
