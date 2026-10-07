@@ -168,7 +168,7 @@ Not syntax, but part of what makes Obsidian feel the way it does.
 | V-16 | Search | Ctrl+F; F3 / Shift+F3 next / previous | ✅ | M | M1 | Ctrl+F jumps as you type; ↓/↑ or F3/Shift+F3 next/previous; Enter keeps, Esc goes back; smart case; wraps |
 | V-20 | Highlight search matches | every match on screen while Ctrl+F / Ctrl+H is open | ✅ | S | M1 | Found in the text as shown (rendered headings, hidden markup); the match at the cursor in a stronger color; cleared when the prompt closes |
 | V-19 | Text selection | Shift + arrows / Home / End / Page Up / Page Down, Ctrl+A selects all | ✅ | M | M1 | Typing replaces the selection, Backspace / Delete delete it, Tab indents its lines; selected lines are shown raw |
-| V-18 | Undo / redo | Ctrl+Z undoes, Ctrl+Y (or Ctrl+Shift+Z) redoes | ✅ | M | M1 | Up to 5 steps (`undo_steps` in config.toml); word-sized steps for typing; undoing back to the saved text clears the unsaved mark |
+| V-18 | Undo / redo | Ctrl+Z undoes, Ctrl+Y (or Ctrl+Shift+Z) redoes | ✅ | M | M1 | Up to 1000 steps (`undo_steps` in config.toml); word-sized steps for typing; undoing back to the saved text clears the unsaved mark |
 | V-17 | Find and replace | Ctrl+H; Enter replaces the match and goes to the next, Ctrl+A replaces all | ✅ | M | M1 | Two fields (Tab switches), jumps as you type, smart case like search |
 | V-14 | Task type continues on Enter | Enter on `- [.] log` → `- [.] ` | ✅ | S | M1 | Keeps the type (`.` `/` `>` `!` `?` …); after `[x]`/`[-]` a fresh `[ ]` |
 

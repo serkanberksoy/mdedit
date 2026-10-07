@@ -98,6 +98,15 @@ source mode the cursor goes to the clicked column; on a rendered line to
 where the clicked text is in the source (hidden markup and glyphs lined
 up). A selection ends.
 
+A block your code block processor renders keeps the cursor out: a click
+on a result row with an action or a link acts, anywhere else in the block
+does nothing. Its source shows when the cursor reaches it by keys, or by
+its `</>` button: send mouse moves to `view.hover(Some(Position::new(x,
+y)))` (`None` when the mouse leaves); the block under the mouse is framed
+in the accent color with the button on its top row, and a click on the
+button puts the cursor in the source. `hover` returns true when the
+hovered block changed, so draw again only then.
+
 The mouse wheel: `view.scroll_rows(3)` (or `-3`) scrolls the live preview
 by screen rows without moving the cursor, through a tall rendered block
 too (a query's long result) instead of into its source; the next key or
@@ -158,6 +167,10 @@ terminal.draw(|frame| {
   line.starts_with("<!-- TBLFM:"))))` hides such lines in the live preview
   and view mode; the cursor still moves onto one, and it shows as written
   while the cursor is on it.
+- Table cells of your own: `markdown::set_table_cells(Some(Rc::new(|lines|
+  …)))` gets a table's lines (its second the separator) and may give lines
+  to show instead (computed cells: `=SUM(B2:B4)` as its result); the table
+  shows as written while the cursor is in it.
 
 ## Resolving links in a vault
 

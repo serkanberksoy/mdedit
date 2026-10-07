@@ -4,7 +4,7 @@ status: every implemented feature, in one note
 tags: [showcase, markdown]
 reviewed: true
 created: 2026-06-29
-version: 3.16.0
+version: 3.20.0
 ---
 # mdedit Feature Showcase
 
@@ -295,8 +295,8 @@ Move the cursor into the table to see it raw.
   skip one, Ctrl+A replaces all. Try replacing `kitten` with `cat`: one
   kitten, two kittens.
 - Search is case-insensitive unless your search has a capital letter.
-- **Ctrl+Z** undoes, up to 5 steps (typing goes back a word at a time;
-  `undo_steps = 50` in `config.toml` keeps more), **Ctrl+Y** redoes.
+- **Ctrl+Z** undoes, up to 1000 steps (typing goes back a word at a time;
+  `undo_steps = 50` in `config.toml` keeps fewer), **Ctrl+Y** redoes.
   Undo everything you changed and the `[+]` unsaved mark goes away.
 - Pasting inserts the text exactly as copied: a pasted list isn't
   continued or renumbered.

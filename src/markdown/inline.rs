@@ -119,6 +119,31 @@ fn rendered(rest: &str, spans: &[(String, String, HostText)]) -> Option<(usize, 
     })
 }
 
+/// A host's table cells ([`set_table_cells`]).
+pub type HostTable = std::rc::Rc<dyn Fn(&[String]) -> Option<Vec<String>>>;
+
+thread_local! {
+    /// The host's table cells ([`set_table_cells`]).
+    static TABLES: std::cell::RefCell<Option<HostTable>> = const { std::cell::RefCell::new(None) };
+}
+
+/// A host's own table cells (computed ones: `=SUM(B2:B4)` shown as its
+/// result): given a table's lines (its second the separator), the lines
+/// to show instead, as many, or `None`. Shown while the cursor isn't in
+/// the table; in it, the table is as written. For the thread that draws;
+/// `None` turns it off.
+pub fn set_table_cells(cells: Option<HostTable>) {
+    TABLES.with(|t| *t.borrow_mut() = cells);
+}
+
+/// The lines the host shows for a table ([`set_table_cells`]).
+pub(crate) fn host_table(lines: &[String]) -> Option<Vec<String>> {
+    TABLES.with(|t| {
+        let host = t.borrow().clone()?;
+        host(lines).filter(|shown| shown.len() == lines.len())
+    })
+}
+
 /// Which lines a host hides ([`set_hidden_lines`]).
 pub type HostLines = std::rc::Rc<dyn Fn(&str) -> bool>;
 

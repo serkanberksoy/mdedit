@@ -15,7 +15,7 @@ mdedit --help                 # all options, keys and settings
 Type to edit, move with the arrows. **Ctrl+S** saves, **Ctrl+X** exits,
 **Ctrl+F** searches, **Ctrl+Z** undoes.
 
-**Version:** 3.16.0 · **Stage:** Milestones 1 (core editor) and 2 (links) complete; next: M3 · [Version history](VERSION.md)
+**Version:** 3.20.0 · **Stage:** Milestones 1 (core editor) and 2 (links) complete; next: M3 · [Version history](VERSION.md)
 
 ```
 █ MARCH 14TH, 2026                    ← # heading, rendered
@@ -140,7 +140,7 @@ heading at the top; a link to a heading in the same note jumps there.
 
 ### Editing
 
-- **Undo / redo** (Ctrl+Z / Ctrl+Y), a word at a time, 5 steps by default
+- **Undo / redo** (Ctrl+Z / Ctrl+Y), a word at a time, 1000 steps by default
   (`undo_steps`). Undo back to the saved text and the `[+]` mark goes away.
 - **Selection** with Shift + arrows, Home, End, Page Up / Down; Ctrl+A
   selects all. Typing replaces it; Tab indents its lines.
@@ -198,7 +198,7 @@ heading at the top; a link to a heading in the same note jumps there.
 | Ctrl+F | Search: jumps to the first match as you type, and every match on screen is highlighted (the current one in red); ↑/↓ previous/next, Enter keeps the position, Esc goes back (case-insensitive unless the search has a capital) |
 | Ctrl+H (or Ctrl+R) | Find and replace: type the search, Tab to the replacement; Enter replaces the match and goes to the next, ↑/↓ skip, Ctrl+A replaces all, Esc closes |
 | F3 / Shift+F3 | Next / previous match of the last search |
-| Ctrl+Z / Ctrl+Y | Undo / redo, up to 5 steps (`undo_steps` setting); Ctrl+Shift+Z also redoes where the terminal reports it; typing undoes a word at a time |
+| Ctrl+Z / Ctrl+Y | Undo / redo, up to 1000 steps (`undo_steps` setting); Ctrl+Shift+Z also redoes where the terminal reports it; typing undoes a word at a time |
 | Shift + arrows / Home / End / PgUp / PgDn, Ctrl+A | Select text (selected lines are shown raw). Typing replaces the selection, Backspace / Delete delete it, Tab / Shift-Tab indent its lines |
 | `*` `_` `~` `=` `` ` `` `"` `(` `[` `{` with a selection | Wrap the selection (`*` twice: bold); it stays selected |
 | Paste a URL over a selection | Makes a link: `[selection](url)` |
@@ -242,7 +242,7 @@ auto_pair = "on"
 # In Konsole "auto" uses half blocks; try "sixel" or "kitty".
 images = "auto"
 # How many steps Ctrl+Z can undo: 1 to 10000 (default 5)
-undo_steps = 5
+undo_steps = 1000
 # Spaces Tab indents a list item (and per list level): 1 to 8 (default 2)
 indent_width = 2
 # Colors: "auto" (detected), "truecolor", "256" or "16"

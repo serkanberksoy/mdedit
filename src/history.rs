@@ -1,7 +1,7 @@
 //! Undo / redo (V-18). Each change is stored as the lines it replaced and
 //! the lines it put there (only the part of the document that differs), so
 //! the history stays small even for a large note. Typing and deleting are
-//! grouped into word-sized steps; 5 steps are kept unless `undo_steps` in
+//! grouped into word-sized steps; 1000 steps are kept unless `undo_steps` in
 //! `config.toml` says otherwise.
 
 /// What made a change, for grouping.
@@ -54,7 +54,7 @@ impl Default for History {
 
 impl History {
     /// Steps that can be undone unless the settings say otherwise.
-    pub const DEFAULT_LIMIT: usize = 5;
+    pub const DEFAULT_LIMIT: usize = 1000;
 
     /// Records the change from `before` to `after` (nothing if they're
     /// equal). `cursor` is the cursor before and after it.
@@ -106,6 +106,17 @@ impl History {
     }
 
     /// Reverts the last change in `lines`; returns where the cursor goes.
+    /// Whether there's a change to undo (for a host that undoes
+    /// something else when there isn't).
+    pub fn can_undo(&self) -> bool {
+        !self.undo.is_empty()
+    }
+
+    /// Whether there's an undone change to redo.
+    pub fn can_redo(&self) -> bool {
+        !self.redo.is_empty()
+    }
+
     pub fn undo(&mut self, lines: &mut Vec<String>) -> Option<(usize, usize)> {
         let change = self.undo.pop()?;
         let end = change.start + change.new.len();
@@ -260,10 +271,21 @@ mod tests {
     }
 
     #[test]
-    fn five_steps_can_be_undone_by_default() {
-        let (undone, lines) = undoable(History::default(), 8);
-        assert_eq!(undone, 5);
-        assert_eq!(lines, doc("3"), "the 5 newest changes are undone");
+    fn it_says_whether_there_is_something_to_undo_or_redo() {
+        let mut h = History::default();
+        let mut lines = doc("0");
+        assert!(!h.can_undo() && !h.can_redo());
+        change(&mut h, &mut lines, "1", Kind::Other);
+        assert!(h.can_undo() && !h.can_redo());
+        h.undo(&mut lines);
+        assert!(!h.can_undo() && h.can_redo());
+    }
+
+    #[test]
+    fn a_thousand_steps_can_be_undone_by_default() {
+        let (undone, lines) = undoable(History::default(), 1003);
+        assert_eq!(undone, 1000);
+        assert_eq!(lines, doc("3"), "the 1000 newest changes are undone");
     }
 
     #[test]
@@ -277,7 +299,10 @@ mod tests {
 
     #[test]
     fn the_saved_state_is_forgotten_when_it_falls_off() {
-        let mut h = History::default();
+        let mut h = History {
+            limit: 5,
+            ..History::default()
+        };
         let mut lines = doc("0");
         h.mark_saved();
         for i in 1..=6 {

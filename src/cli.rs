@@ -80,7 +80,7 @@ Settings, one key = \"value\" per line in ~/.config/mdedit/config.toml
   done_style = strike | grey          How done tasks look (default: strike)
   auto_pair = on | off                Auto-pair brackets and ** == ~~
                                       (default: on)
-  undo_steps = 1 to 10000             Steps Ctrl+Z can undo (default: 5)
+  undo_steps = 1 to 10000             Steps Ctrl+Z can undo (default: 1000)
   indent_width = 1 to 8               Spaces Tab indents a list item, and
                                       per list level (default: 2)
   images = auto | kitty | sixel | iterm2 | halfblocks | off

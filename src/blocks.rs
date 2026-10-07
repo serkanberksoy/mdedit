@@ -77,6 +77,18 @@ pub enum TableRowKind {
     Body,
 }
 
+/// The column widths of a table's lines (its second line the separator):
+/// each column's widest cell.
+pub(crate) fn table_widths(lines: &[String]) -> Vec<usize> {
+    let mut widths = vec![1; lines.first().map_or(0, |h| table_cells(h).len())];
+    for (_, line) in lines.iter().enumerate().filter(|&(r, _)| r != 1) {
+        for (w, cell) in widths.iter_mut().zip(table_cells(line)) {
+            *w = (*w).max(cell_width(cell));
+        }
+    }
+    widths
+}
+
 /// A table's lines and column widths (display width of the widest
 /// rendered cell in each column).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -430,12 +442,7 @@ pub fn analyze(lines: &[String]) -> Structure {
             end += 1;
             s.context[end] = row(TableRowKind::Body);
         }
-        let mut widths = vec![1; table_cells(header).len()];
-        for r in (i..=end).filter(|&r| r != i + 1) {
-            for (w, cell) in widths.iter_mut().zip(table_cells(&lines[r])) {
-                *w = (*w).max(cell_width(cell));
-            }
-        }
+        let widths = table_widths(&lines[i..=end]);
         s.tables.push(Table {
             start: i,
             end,

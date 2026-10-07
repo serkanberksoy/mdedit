@@ -344,6 +344,8 @@ impl StatefulWidget for EditorWidget<'_> {
         let mut screen_rows: Vec<(usize, usize)> = Vec::with_capacity(height);
         // Images to draw over the text (E-04): screen row of the top, slot.
         let mut images = Vec::new();
+        // The host's rendered blocks: line, first screen row, rows.
+        let mut blocks = Vec::new();
         for i in view.scroll..ed.lines.len() {
             if rows.len() >= height {
                 break;
@@ -361,6 +363,9 @@ impl StatefulWidget for EditorWidget<'_> {
                 images.push((rows.len() + slot.row - skip, slot.clone()));
             }
             attrs.extend((skip..w.rows.len()).map(|k| w.attrs.get(k).copied().unwrap_or_default()));
+            if doc.opens_processed_block(i) {
+                blocks.push((i, rows.len(), w.rows.len() - skip, skip == 0));
+            }
             screen_rows.extend((skip..w.rows.len()).map(|k| (i, k)));
             rows.extend(w.rows.into_iter().skip(skip));
         }
@@ -390,6 +395,32 @@ impl StatefulWidget for EditorWidget<'_> {
                 }
             }
         }
+        // The block under the mouse: its frame in the accent color, and a
+        // button that shows its source (not in view mode).
+        view.source_button = None;
+        if let Some(&(line, top, n, whole)) = blocks
+            .iter()
+            .find(|b| Some(b.0) == view.hovered && !reading)
+        {
+            let accent = Style::default().fg(Color::Cyan);
+            for y in top..(top + n).min(height) {
+                let at = body.y + y as u16;
+                let bar = Rect::new(body.x, at, 1.min(body.width), 1);
+                buf.set_style(bar, accent);
+            }
+            if whole && top < height && body.width > 8 {
+                let at = body.y + top as u16;
+                buf.set_style(Rect::new(body.x, at, body.width, 1), accent);
+                let button = Rect::new(body.right() - 3, at, 3, 1);
+                buf.set_string(button.x, at, "</>", accent.add_modifier(Modifier::BOLD));
+                view.source_button = Some((button, line));
+            }
+        }
+        view.blocks = blocks
+            .into_iter()
+            .filter(|&(_, top, ..)| top < height)
+            .map(|(line, top, n, _)| (line, top, n.min(height - top)))
+            .collect();
         view.screen_rows = screen_rows;
         view.text_area = body;
         let text_cursor = if reading {
@@ -809,6 +840,81 @@ mod tests {
             rows.iter().any(|r| r.contains("Thing.base › V")),
             "{rows:#?}"
         );
+    }
+
+    #[test]
+    fn a_host_block_under_the_mouse_is_framed_and_clicks_keep_it_rendered() {
+        use crate::processor::CodeBlockProcessor;
+        use crate::view::Outcome;
+        use std::path::Path;
+        struct Rows;
+        impl CodeBlockProcessor for Rows {
+            fn handles(&self, lang: &str) -> bool {
+                lang == "rows"
+            }
+            fn render(
+                &self,
+                lang: &str,
+                source: &[String],
+                from: Option<&Path>,
+                width: usize,
+            ) -> Vec<Line<'static>> {
+                self.render_rows(lang, source, from, width)
+                    .into_iter()
+                    .map(|(l, _)| l)
+                    .collect()
+            }
+            fn render_rows(
+                &self,
+                _: &str,
+                _: &[String],
+                _: Option<&Path>,
+                _: usize,
+            ) -> Vec<(Line<'static>, Option<String>)> {
+                vec![
+                    (Line::raw("plain row"), None),
+                    (Line::raw("action row"), Some("act".into())),
+                ]
+            }
+        }
+        let mut a = app("top\n```rows\nquery\n```\nafter");
+        a.shared.processor = Some(Box::new(Rows));
+        let (rows, _) = screen(&mut a, 40, 8);
+        let y = |text: &str, rows: &[String]| {
+            rows.iter()
+                .position(|r| r.contains(text))
+                .unwrap_or_else(|| panic!("{text}: {rows:#?}")) as u16
+        };
+        let body = a.view.text_area;
+        let at = |x: u16, y: u16| Position::new(body.x + x, body.y + y);
+        let (fence, plain, action) = (
+            y("╭─", &rows),
+            y("plain row", &rows),
+            y("action row", &rows),
+        );
+        assert!(!rows.iter().any(|r| r.contains("</>")), "{rows:#?}");
+        // The mouse over the block: its frame and a source button.
+        assert!(a.view.hover(Some(at(4, plain))), "changed");
+        assert!(!a.view.hover(Some(at(6, action))), "the same block");
+        let (rows, _) = screen(&mut a, 40, 8);
+        assert!(rows[fence as usize].ends_with("</>"), "{rows:#?}");
+        // A click on a row without an action: nothing, the block stays.
+        assert_eq!(a.view.click(at(4, plain), &mut a.shared), Outcome::Consumed);
+        assert_eq!(a.view.editor.row, 0, "the cursor stays");
+        // On a row with one: its action.
+        assert_eq!(
+            a.view.click(at(4, action), &mut a.shared),
+            Outcome::Action("act".into())
+        );
+        // The button: the source, the cursor in it.
+        let x = rows[fence as usize].chars().count() as u16 - 2 - body.x;
+        assert_eq!(a.view.click(at(x, fence), &mut a.shared), Outcome::Consumed);
+        assert_eq!(a.view.editor.row, 2, "the block's first line");
+        let (rows, _) = screen(&mut a, 40, 8);
+        assert!(rows.iter().any(|r| r.contains("query")), "{rows:#?}");
+        // Shown as source, it's no block any more.
+        assert!(a.view.blocks.is_empty() && a.view.hovered.is_none());
+        assert!(!a.view.hover(Some(at(1, plain))));
     }
 
     #[test]

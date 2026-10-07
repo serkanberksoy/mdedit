@@ -708,3 +708,21 @@ fn a_host_hides_lines_until_the_cursor_is_on_them() {
     let screen = draw_view(&mut terminal, &mut shared, &mut view);
     assert_eq!(screen[1], "<!-- TBLFM: $2=1 -->", "without the hook, shown");
 }
+
+#[test]
+fn a_host_shows_its_own_table_cells_until_the_cursor_is_in_the_table() {
+    let mut shared = Shared::new();
+    mdedit::markdown::set_table_cells(Some(std::rc::Rc::new(|lines: &[String]| {
+        Some(lines.iter().map(|l| l.replace("=1+1", "2")).collect())
+    })));
+    let mut view = EditorView::new("top\n| a | b |\n|---|---|\n| x | =1+1 |\nend", None);
+    let mut terminal = Terminal::new(TestBackend::new(30, 9)).unwrap();
+    let screen = draw_view(&mut terminal, &mut shared, &mut view);
+    let all = screen.join("\n");
+    assert!(all.contains("│ x │ 2 │") && !all.contains("=1+1"), "{all}");
+    // In the table: as written.
+    view.handle_key(key(KeyCode::Down, KeyModifiers::NONE), &mut shared);
+    let all = draw_view(&mut terminal, &mut shared, &mut view).join("\n");
+    assert!(all.contains("=1+1"), "{all}");
+    mdedit::markdown::set_table_cells(None);
+}

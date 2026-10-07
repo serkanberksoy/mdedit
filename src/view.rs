@@ -126,6 +126,14 @@ pub struct EditorView {
     /// the text area they were drawn in (for [`EditorView::click`]).
     pub screen_rows: Vec<(usize, usize)>,
     pub text_area: Rect,
+    /// The host's rendered code blocks in the last frame: each one's
+    /// opening line, its first screen row and how many rows it has there.
+    pub blocks: Vec<(usize, usize, usize)>,
+    /// The rendered block the mouse is over (its opening line), framed and
+    /// with a source button ([`EditorView::hover`]).
+    pub hovered: Option<usize>,
+    /// Where that block's source button was drawn, and the block's line.
+    pub source_button: Option<(Rect, usize)>,
     /// The lines as the last key left them (and the document's id), for
     /// the undo history: a key compares against them instead of copying
     /// the whole document first.
@@ -167,6 +175,9 @@ impl EditorView {
             read_focus: None,
             screen_rows: Vec::new(),
             text_area: Rect::default(),
+            blocks: Vec::new(),
+            hovered: None,
+            source_button: None,
             shadow: Vec::new(),
             shadow_id: None,
         }
@@ -1124,15 +1135,43 @@ impl EditorView {
         }
     }
 
+    /// The mouse moved to `at` (`None`: it left): the host's rendered block
+    /// under it, if any, is framed and gets a `</>` button that shows its
+    /// source. True if that changed (draw again).
+    pub fn hover(&mut self, at: Option<Position>) -> bool {
+        let area = self.text_area;
+        let block = at.filter(|&p| area.contains(p)).and_then(|p| {
+            let y = usize::from(p.y - area.y);
+            self.blocks
+                .iter()
+                .find(|&&(_, top, rows)| (top..top + rows).contains(&y))
+                .map(|&(line, ..)| line)
+        });
+        let changed = block != self.hovered;
+        self.hovered = block;
+        changed
+    }
+
     /// A click at `at` on the screen. On a link (or an embed, an image, a
     /// code block result row) it follows it, as Enter does in view mode;
     /// in view mode a click elsewhere moves the row cursor there. Anywhere
     /// else in the text it places the cursor: on the line being edited (raw
     /// text) and in source mode at that column, on a rendered line where
-    /// the clicked text is in its source. Outside the text it's `Ignored`.
+    /// the clicked text is in its source. A host's rendered block keeps
+    /// the cursor out (its rows' actions and links still work) but for its
+    /// `</>` button, which shows its source. Outside the text it's
+    /// `Ignored`.
     pub fn click(&mut self, at: Position, shared: &mut Shared) -> Outcome {
         if !self.text_area.contains(at) {
             return Outcome::Ignored;
+        }
+        if let Some((button, line)) = self.source_button
+            && button.contains(at)
+            && !self.reading
+        {
+            self.place_cursor(line + 1, 0);
+            self.hovered = None;
+            return Outcome::Consumed;
         }
         let y = usize::from(at.y - self.text_area.y);
         let Some(&(line, sub)) = self.screen_rows.get(y) else {
@@ -1159,6 +1198,9 @@ impl EditorView {
             };
         }
         let Some(item) = hit.and_then(|h| rows[sub].items.get(h)) else {
+            if self.blocks.iter().any(|&(l, ..)| l == line) {
+                return Outcome::Consumed;
+            }
             let shown: Vec<&str> = rows.iter().map(|r| r.text.as_str()).collect();
             let col = ui::source_col(&self.editor.lines[line], &shown, sub, x);
             self.place_cursor(line, col);

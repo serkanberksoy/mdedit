@@ -932,7 +932,7 @@ mod tests {
         for _ in 0..10 {
             ctrl_key(&mut app, 'z');
         }
-        assert_eq!(app.view.editor.lines, ["a b"], "5 words undone, by default");
+        assert_eq!(app.view.editor.lines, [""], "every word undone, by default");
         assert!(
             app.view.status.contains("Nothing to undo"),
             "{}",

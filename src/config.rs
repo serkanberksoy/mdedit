@@ -322,11 +322,11 @@ mod tests {
 
     #[test]
     fn reads_undo_steps() {
-        assert_eq!(Config::default().undo_steps, 5);
+        assert_eq!(Config::default().undo_steps, 1000);
         assert_eq!(Config::parse("undo_steps = 50").0.undo_steps, 50);
         for bad in ["undo_steps = 0", "undo_steps = lots", "undo_steps = 100001"] {
             let (c, warnings) = Config::parse(bad);
-            assert_eq!(c.undo_steps, 5, "{bad}");
+            assert_eq!(c.undo_steps, 1000, "{bad}");
             assert_eq!(warnings.len(), 1, "{bad}");
         }
     }

@@ -49,7 +49,13 @@ pub(super) struct Doc<'a> {
     image_cell: Option<(u16, u16)>,
     /// The host's code block processor, if any.
     processor: Option<&'a dyn CodeBlockProcessor>,
+    /// Tables the host shows its own way ([`crate::markdown::set_table_cells`]):
+    /// their lines and widths, by table, worked out when drawn.
+    shown_tables: RefCell<HashMap<usize, Option<Arc<ShownTable>>>>,
 }
+
+/// A table as the host shows it: its lines and column widths.
+type ShownTable = (Vec<String>, Vec<usize>);
 
 /// A fence's language: a top-level fence or one in a quote.
 fn block_lang(context: &LineContext) -> Option<&str> {
@@ -84,7 +90,27 @@ impl<'a> Doc<'a> {
             links,
             image_cell: Some((10, 20)),
             processor: None,
+            shown_tables: RefCell::new(HashMap::new()),
         }
+    }
+
+    /// The host's lines and widths for table `t`, if it shows it its own
+    /// way (not while the cursor is in it).
+    fn shown_table(&self, t: usize) -> Option<Arc<ShownTable>> {
+        let table = &self.structure.tables[t];
+        if touches(self.cursor, self.selection, table.start, table.end) {
+            return None;
+        }
+        self.shown_tables
+            .borrow_mut()
+            .entry(t)
+            .or_insert_with(|| {
+                let lines = &self.lines[table.start..=table.end];
+                let shown = crate::markdown::host_table(lines)?;
+                let widths = crate::blocks::table_widths(&shown);
+                Some(Arc::new((shown, widths)))
+            })
+            .clone()
     }
 
     /// The same document with the host's code blocks rendered by
@@ -102,6 +128,12 @@ impl<'a> Doc<'a> {
         let lang = block_lang(&self.structure.context[start])?;
         (processor.handles(lang) && !touches(self.cursor, self.selection, start, end))
             .then_some((processor, start, end))
+    }
+
+    /// Whether line `i` opens a block the host renders (shown rendered).
+    pub(super) fn opens_processed_block(&self, i: usize) -> bool {
+        self.processed_block(i)
+            .is_some_and(|(_, start, _)| start == i)
     }
 
     /// A processed block (at its opening line): the block's frame around
@@ -396,14 +428,16 @@ impl<'a> Doc<'a> {
                 .is_none_or(|(a, b)| !touches(self.cursor, self.selection, a, b))
         {
             let t = &structure.tables[*table];
+            let shown = self.shown_table(*table);
+            let widths = shown.as_ref().map_or(&t.widths, |s| &s.1);
             let mut r = self.view(i);
             self.show_search(i, &mut r);
             let mut rows = wrap(&r.line, 0, 0);
             if *kind == TableRowKind::Header {
-                rows.pad_top_with(table_border(&t.widths, "┌", "┬", "┐"));
+                rows.pad_top_with(table_border(widths, "┌", "┬", "┐"));
             }
             if i == t.end {
-                rows.pad_bottom_with(table_border(&t.widths, "└", "┴", "┘"));
+                rows.pad_bottom_with(table_border(widths, "└", "┴", "┘"));
             }
             return rows;
         }
@@ -546,14 +580,16 @@ impl<'a> Doc<'a> {
             LineContext::Quote { callouts, code } => render_quote(line, callouts, code.as_ref()),
             LineContext::TableRow { table, kind } => {
                 let t = &structure.tables[*table];
+                // The host's own cells, if it shows the table its way.
+                let shown = self.shown_table(*table);
+                let (line, widths) = match &shown {
+                    Some(s) => (s.0[i - t.start].as_str(), &s.1),
+                    None => (line.as_str(), &t.widths),
+                };
                 match kind {
-                    TableRowKind::Separator => table_border(&t.widths, "├", "┼", "┤").into(),
-                    TableRowKind::Header => {
-                        render_table_row(line, &t.widths, &t.aligns, true).into()
-                    }
-                    TableRowKind::Body => {
-                        render_table_row(line, &t.widths, &t.aligns, false).into()
-                    }
+                    TableRowKind::Separator => table_border(widths, "├", "┼", "┤").into(),
+                    TableRowKind::Header => render_table_row(line, widths, &t.aligns, true).into(),
+                    TableRowKind::Body => render_table_row(line, widths, &t.aligns, false).into(),
                 }
             }
             LineContext::IndentedCode => render_code_line(dedent_code(line)),

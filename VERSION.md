@@ -1,6 +1,6 @@
 # Version history
 
-Current version: **3.16.0**
+Current version: **3.20.0**
 
 ## Versioning rules
 
@@ -28,6 +28,43 @@ Entry format: `## X.Y.Z (YYYY-MM-DD)`, followed by *Added / Changed / Fixed*
 sections that name feature IDs where there are any.
 
 ---
+
+## 3.20.0 (2026-10-07)
+
+### Added
+- **Rendered blocks and the mouse (for hosts):** `EditorView::hover`
+  takes mouse moves; the host's rendered code block under the mouse is
+  framed in the accent color, with a `</>` button on its top row that
+  puts the cursor in its source. `hover` says whether the hovered block
+  changed, so a host draws again only then.
+
+### Changed
+- A click in a host's rendered block no longer puts the cursor in its
+  source (which showed the source): result rows with an action or a link
+  still act, anywhere else does nothing. The source shows by keys or the
+  `</>` button.
+
+## 3.19.0 (2026-10-07)
+
+### Added
+- **Whether there's something to undo, for hosts** (`History::can_undo`,
+  `can_redo`): a host can undo something of its own when the document
+  has nothing to undo.
+
+## 3.18.0 (2026-10-07)
+
+### Added
+- **A host's table cells** (`markdown::set_table_cells`): the host can
+  show a table's cells its own way (computed values in place of
+  `=SUM(B2:B4)`), the columns sized to fit them. While the cursor is in
+  the table, it shows as written.
+
+## 3.17.0 (2026-10-07)
+
+### Changed
+- **1000 undo steps by default** (V-18; was 5). Only the lines a change
+  touched are stored, so a long history stays small. `undo_steps` still
+  sets the number.
 
 ## 3.16.0 (2026-10-06)
 
