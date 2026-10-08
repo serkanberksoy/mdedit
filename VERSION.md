@@ -1,6 +1,6 @@
 # Version history
 
-Current version: **3.21.0**
+Current version: **3.22.0**
 
 ## Versioning rules
 
@@ -28,6 +28,14 @@ Entry format: `## X.Y.Z (YYYY-MM-DD)`, followed by *Added / Changed / Fixed*
 sections that name feature IDs where there are any.
 
 ---
+
+## 3.22.0 (2026-10-08)
+
+### Added
+- **Marks (for hosts):** `markdown::set_marks` lets a host style parts of
+  a line its own way: byte ranges shown as written, with a style patched
+  on (a task's dates and priority as muted chips). Ranges inside other
+  markup are left as they were.
 
 ## 3.21.0 (2026-10-07)
 

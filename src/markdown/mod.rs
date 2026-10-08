@@ -247,6 +247,32 @@ mod tests {
     }
 
     #[test]
+    fn a_hosts_marks_restyle_text_as_written() {
+        use std::rc::Rc;
+        let chip = Style::new().fg(Color::DarkGray).bg(Color::Black);
+        set_marks(Some(Rc::new(move |t: &str| {
+            t.find("📅")
+                .map(|at| vec![(at..t.len(), chip)])
+                .unwrap_or_default()
+        })));
+        let spans = inline_spans("do **it** 📅 2026-10-12", Style::default());
+        let nested = inline_spans("[[A|see 📅 x]]", Style::default());
+        set_marks(None);
+        assert_eq!(plain(&Line::from(spans.clone())), "do it 📅 2026-10-12");
+        let marked = spans.iter().find(|s| s.content.contains('📅')).unwrap();
+        assert_eq!(marked.content, "📅 2026-10-12");
+        assert_eq!(marked.style.bg, Some(Color::Black));
+        let bold = spans.iter().find(|s| s.content == "it").unwrap();
+        assert!(bold.style.add_modifier.contains(Modifier::BOLD));
+        assert!(
+            nested.iter().all(|s| s.style.bg != Some(Color::Black)),
+            "inside markup, as it was: {nested:?}"
+        );
+        let off = inline_spans("x 📅 1", Style::default());
+        assert!(off.iter().all(|s| s.style.bg.is_none()), "off again");
+    }
+
+    #[test]
     fn a_hosts_link_badges_and_rendered_spans() {
         use std::rc::Rc;
         set_link_badge(Some(Rc::new(|t: &str| (t == "A").then(|| "3".to_string()))));

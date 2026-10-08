@@ -170,6 +170,11 @@ terminal.draw(|frame| {
   line.starts_with("<!-- TBLFM:"))))` hides such lines in the live preview
   and view mode; the cursor still moves onto one, and it shows as written
   while the cursor is on it.
+- Parts of a line styled your own way:
+  `markdown::set_marks(Some(Rc::new(|text| vec![(range, style)])))` gets a
+  line's text (after its list marker) and gives byte ranges to show as
+  written, with the style patched on (a task's dates as muted chips).
+  Nothing in a range is Markdown; a range inside other markup is ignored.
 - Table cells of your own: `markdown::set_table_cells(Some(Rc::new(|lines|
   …)))` gets a table's lines (its second the separator) and may give lines
   to show instead (computed cells: `=SUM(B2:B4)` as its result); the table

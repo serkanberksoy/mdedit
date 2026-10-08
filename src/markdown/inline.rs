@@ -173,16 +173,47 @@ fn verbatim_len(rest: &str, pairs: &[(String, String)]) -> Option<usize> {
     })
 }
 
+/// A host's marks: the byte ranges of a text to show in a style of their
+/// own.
+pub type HostMarks = std::rc::Rc<dyn Fn(&str) -> Vec<(std::ops::Range<usize>, Style)>>;
+
+thread_local! {
+    /// The host's marks ([`set_marks`]).
+    static MARKS: std::cell::RefCell<Option<HostMarks>> = const { std::cell::RefCell::new(None) };
+}
+
+/// Parts of a text the host styles its own way (a task's dates as muted
+/// chips): given a line's text (after its list marker or heading), the
+/// byte ranges to show as written, nothing in them Markdown, with their
+/// style patched on. A range inside other markup (a link, `**…**`) is left
+/// as it was. For the thread that draws; `None` turns it off.
+pub fn set_marks(marks: Option<HostMarks>) {
+    MARKS.with(|m| *m.borrow_mut() = marks);
+}
+
 /// Parses inline markup in `text`, returning styled spans with the syntax
 /// hidden. `base` is patched with each token's style; markup nests
 /// (`~~a **b** c~~`).
 pub fn inline_spans(text: &str, base: Style) -> Vec<Span<'static>> {
+    let mut marks = MARKS
+        .with(|m| m.borrow().clone())
+        .map(|host| host(text))
+        .unwrap_or_default();
+    marks.retain(|(r, _)| {
+        r.start < r.end && text.is_char_boundary(r.start) && text.is_char_boundary(r.end)
+    });
+    marks.sort_by_key(|(r, _)| r.start);
     let mut out = Vec::new();
-    parse_inline(text, base, &mut out);
+    parse_inline(text, base, &marks, &mut out);
     out
 }
 
-fn parse_inline(text: &str, base: Style, out: &mut Vec<Span<'static>>) {
+fn parse_inline(
+    text: &str,
+    base: Style,
+    marks: &[(std::ops::Range<usize>, Style)],
+    out: &mut Vec<Span<'static>>,
+) {
     let link = Style::default().fg(Color::LightBlue);
     let url = Style::default()
         .fg(Color::Blue)
@@ -204,6 +235,17 @@ fn parse_inline(text: &str, base: Style, out: &mut Vec<Span<'static>>) {
     while i < text.len() {
         let rest = &text[i..];
         let prev = text[..i].chars().next_back();
+
+        // A host's mark: as written, in its style.
+        if let Some((range, style)) = marks.iter().find(|(r, _)| r.start == i) {
+            flush(&mut plain, out);
+            out.push(Span::styled(
+                text[range.clone()].to_string(),
+                base.patch(*style),
+            ));
+            i = range.end;
+            continue;
+        }
 
         // A host's rendered span (`[@key]` as `Doe 2020`).
         if !spans.is_empty()
@@ -335,7 +377,7 @@ fn parse_inline(text: &str, base: Style, out: &mut Vec<Span<'static>>) {
             if rest.starts_with('!') {
                 out.push(Span::styled(format!("🖼 {label}"), base.patch(link)));
             } else {
-                parse_inline(label, style, out);
+                parse_inline(label, style, &[], out);
             }
             i += len;
             continue;
@@ -346,7 +388,7 @@ fn parse_inline(text: &str, base: Style, out: &mut Vec<Span<'static>>) {
             && let Some((len, label)) = reference_link(rest)
         {
             flush(&mut plain, out);
-            parse_inline(label, base.patch(link), out);
+            parse_inline(label, base.patch(link), &[], out);
             i += len;
             continue;
         }
@@ -418,7 +460,7 @@ fn parse_inline(text: &str, base: Style, out: &mut Vec<Span<'static>>) {
                 Some((len, color)) if rest.starts_with("==") => (open + len, style.bg(color)),
                 _ => (open, style),
             };
-            parse_inline(&text[start..close], base.patch(style), out);
+            parse_inline(&text[start..close], base.patch(style), &[], out);
             i = close + marker;
             continue;
         }
