@@ -1262,7 +1262,9 @@ mod tests {
         std::fs::create_dir(d.join("sub")).unwrap();
         let mut a = App::new("text", Some(d.join("a.md")));
         a.handle_key(ctrl_alt('s'));
-        let (rows, cursor) = screen(&mut a, 60, 14);
+        // Wide enough for the folder's whole path (Windows' temp folder is
+        // long).
+        let (rows, cursor) = screen(&mut a, 140, 14);
         let all = rows.join("\n");
         assert!(all.contains("Save As"), "{all}");
         assert!(all.contains(&d.display().to_string()), "{all}");
@@ -1873,6 +1875,9 @@ mod tests {
     /// Drives the real crossterm backend into an in-memory VT100 emulator and
     /// checks that what a terminal would display matches what was drawn,
     /// frame after frame, while the cursor walks the whole document.
+    // ANSI output to a buffer: crossterm on Windows without a console
+    // turns to the console API instead.
+    #[cfg(unix)]
     #[test]
     fn terminal_output_matches_buffer_while_scrolling() {
         use ratatui::backend::CrosstermBackend;

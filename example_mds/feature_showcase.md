@@ -4,7 +4,7 @@ status: every implemented feature, in one note
 tags: [showcase, markdown]
 reviewed: true
 created: 2026-06-29
-version: 3.23.0
+version: 3.24.0
 ---
 # mdedit Feature Showcase
 

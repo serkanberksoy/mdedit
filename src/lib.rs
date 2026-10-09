@@ -65,6 +65,7 @@ pub mod images;
 pub mod links;
 pub mod markdown;
 pub mod palette;
+pub mod platform;
 pub mod processor;
 pub mod resolver;
 pub mod search;

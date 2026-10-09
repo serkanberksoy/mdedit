@@ -255,13 +255,14 @@ pub fn parse_color(value: &str) -> Option<Color> {
     Some(named)
 }
 
-/// `$XDG_CONFIG_HOME/mdedit/config.toml`, or `~/.config/mdedit/config.toml`.
+/// `$XDG_CONFIG_HOME/mdedit/config.toml`, or `~/.config/mdedit/config.toml`
+/// (`%APPDATA%\mdedit\config.toml` on Windows).
 pub fn default_path() -> Option<PathBuf> {
-    let config = std::env::var_os("XDG_CONFIG_HOME")
-        .filter(|v| !v.is_empty())
-        .map(PathBuf::from)
-        .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".config")))?;
-    Some(config.join("mdedit").join("config.toml"))
+    Some(
+        crate::platform::config_home()?
+            .join("mdedit")
+            .join("config.toml"),
+    )
 }
 
 #[cfg(test)]

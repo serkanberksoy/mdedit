@@ -1,6 +1,6 @@
 # Version history
 
-Current version: **3.23.0**
+Current version: **3.24.0**
 
 ## Versioning rules
 
@@ -28,6 +28,21 @@ Entry format: `## X.Y.Z (YYYY-MM-DD)`, followed by *Added / Changed / Fixed*
 sections that name feature IDs where there are any.
 
 ---
+
+## 3.24.0 (2026-10-09)
+
+### Added
+- **Windows:** mdedit builds and runs on Windows. Its settings and
+  recent emoji are in `%APPDATA%\mdedit`, `~` is `%USERPROFILE%`, the
+  clipboard is read with PowerShell, and Windows Terminal and the console
+  get every color. Its tests pass on Windows (checked under Wine).
+- **For hosts:** `platform` says where things are and how things run on
+  Linux, macOS and Windows: the home and config folders, opening a file
+  or link, a shell command, the clipboard's tools, and canonical paths
+  without Windows' `\\?\` prefix (`platform::canonical`).
+
+### Fixed
+- The feature tests' matrix writes its paths with `/` on every system.
 
 ## 3.23.0 (2026-10-08)
 

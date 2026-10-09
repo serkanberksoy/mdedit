@@ -62,11 +62,12 @@ struct Fixture {
 }
 
 impl Fixture {
+    /// `path` under `tests/`, with `/` on every system (the matrix's links).
     fn rel(path: &Path) -> String {
         path.strip_prefix(root().join("tests"))
             .unwrap()
-            .display()
-            .to_string()
+            .to_string_lossy()
+            .replace('\\', "/")
     }
 
     /// Test name, e.g. `05-blocks/B-03-callout`.

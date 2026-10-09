@@ -303,7 +303,11 @@ impl EditorView {
                 Some(text) => self.handle_paste(&text, shared),
                 None => {
                     self.status =
-                        "Nothing to paste: the clipboard is empty or can't be read (install wl-clipboard or xclip)"
+                        if cfg!(windows) {
+                            "Nothing to paste: the clipboard is empty or can't be read"
+                        } else {
+                            "Nothing to paste: the clipboard is empty or can't be read (install wl-clipboard or xclip)"
+                        }
                             .into();
                 }
             }
@@ -1223,7 +1227,7 @@ impl EditorView {
 
     /// Whether `path` is the file being edited.
     fn is_this_file(&self, path: &Path) -> bool {
-        let real = |p: &Path| std::fs::canonicalize(p).ok();
+        let real = |p: &Path| crate::platform::canonical(p).ok();
         self.path
             .as_deref()
             .is_some_and(|own| real(own).is_some() && real(own) == real(path))

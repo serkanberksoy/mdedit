@@ -9,28 +9,23 @@ pub trait Clipboard {
 }
 
 /// The desktop clipboard, read with the first tool that works:
-/// `wl-paste` (Wayland), `xclip` or `xsel` (X11), `pbpaste` (macOS).
+/// `wl-paste` (Wayland), `xclip` or `xsel` (X11), `pbpaste` (macOS),
+/// PowerShell (Windows) ([`crate::platform::paste_tools`]). Windows'
+/// `\r\n` line ends come in as `\n`.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct SystemClipboard;
 
-/// The tools, with their arguments, in the order they're tried.
-const TOOLS: [&[&str]; 4] = [
-    &["wl-paste", "--no-newline"],
-    &["xclip", "-selection", "clipboard", "-o"],
-    &["xsel", "--clipboard", "--output"],
-    &["pbpaste"],
-];
-
 impl Clipboard for SystemClipboard {
     fn read(&self) -> Option<String> {
-        TOOLS.iter().find_map(|tool| {
-            let out = std::process::Command::new(tool[0])
+        let tools = crate::platform::paste_tools(crate::platform::Os::this());
+        tools.iter().find_map(|tool| {
+            let out = std::process::Command::new(&tool[0])
                 .args(&tool[1..])
                 .stdin(std::process::Stdio::null())
                 .stderr(std::process::Stdio::null())
                 .output()
                 .ok()?;
-            let text = String::from_utf8(out.stdout).ok()?;
+            let text = String::from_utf8(out.stdout).ok()?.replace("\r\n", "\n");
             (out.status.success() && !text.is_empty()).then_some(text)
         })
     }

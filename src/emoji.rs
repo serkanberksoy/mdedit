@@ -121,13 +121,14 @@ impl Recent {
     }
 }
 
-/// `$XDG_CONFIG_HOME/mdedit/recent_emoji`, or `~/.config/mdedit/recent_emoji`.
+/// `$XDG_CONFIG_HOME/mdedit/recent_emoji`, or `~/.config/mdedit/recent_emoji`
+/// (`%APPDATA%\mdedit\recent_emoji` on Windows).
 pub fn default_recent_path() -> Option<PathBuf> {
-    let config = std::env::var_os("XDG_CONFIG_HOME")
-        .filter(|v| !v.is_empty())
-        .map(PathBuf::from)
-        .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".config")))?;
-    Some(config.join("mdedit").join("recent_emoji"))
+    Some(
+        crate::platform::config_home()?
+            .join("mdedit")
+            .join("recent_emoji"),
+    )
 }
 
 /// Picker popup state.

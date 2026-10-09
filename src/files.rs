@@ -169,12 +169,15 @@ impl Browser {
         Some((path, e.is_dir))
     }
 
-    /// The typed input as a path: `~/…` is under the home folder, absolute
-    /// paths stay, anything else is relative to the current folder.
+    /// The typed input as a path: `~/…` (`~\…` too) is under the home
+    /// folder, absolute paths stay, anything else is relative to the
+    /// current folder.
     pub fn typed_path(&self) -> PathBuf {
         let input = self.input.trim();
-        if let Some(rest) = input.strip_prefix("~/")
-            && let Some(home) = std::env::var_os("HOME")
+        if let Some(rest) = input
+            .strip_prefix("~/")
+            .or_else(|| input.strip_prefix("~\\"))
+            && let Some(home) = crate::platform::home()
         {
             return Path::new(&home).join(rest);
         }
@@ -190,7 +193,7 @@ impl Browser {
 /// file is the copy, renamed. A symbolic link is followed (the link stays).
 pub fn write_atomic(path: &Path, contents: &str) -> std::io::Result<()> {
     use std::io::Write;
-    let target = fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+    let target = crate::platform::canonical(path).unwrap_or_else(|_| path.to_path_buf());
     let dir = match target.parent() {
         Some(d) if !d.as_os_str().is_empty() => d.to_path_buf(),
         _ => PathBuf::from("."),

@@ -35,8 +35,8 @@ Keys: editing
   Tab / Shift+Tab             Nest / un-nest list items (all selected lines)
   Backspace / Delete          Delete (the selection, or an empty pair)
   Ctrl+V                      Paste from the clipboard (wl-paste, xclip,
-                              xsel or pbpaste); the terminal's own paste
-                              works too
+                              xsel, pbpaste or PowerShell); the terminal's
+                              own paste works too
   Ctrl+T                      Turn the line into a task
   Ctrl+L                      Close the task, or reopen a closed one
   Ctrl+Z / Ctrl+Y             Undo / redo (Ctrl+Shift+Z also redoes); typing
@@ -76,7 +76,8 @@ Keys: view, links and files
   Ctrl+X                      Exit (asks to save unsaved changes)
 
 Settings, one key = \"value\" per line in ~/.config/mdedit/config.toml
-(or $XDG_CONFIG_HOME/mdedit/config.toml):
+(or $XDG_CONFIG_HOME/mdedit/config.toml; %APPDATA%\\mdedit\\config.toml
+on Windows):
   done_style = strike | grey          How done tasks look (default: strike)
   auto_pair = on | off                Auto-pair brackets and ** == ~~
                                       (default: on)

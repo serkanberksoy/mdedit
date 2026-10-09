@@ -15,7 +15,7 @@ mdedit --help                 # all options, keys and settings
 Type to edit, move with the arrows. **Ctrl+S** saves, **Ctrl+X** exits,
 **Ctrl+F** searches, **Ctrl+Z** undoes.
 
-**Version:** 3.23.0 · **Stage:** Milestones 1 (core editor) and 2 (links) complete; next: M3 · [Version history](VERSION.md)
+**Version:** 3.24.0 · **Stage:** Milestones 1 (core editor) and 2 (links) complete; next: M3 · [Version history](VERSION.md)
 
 ```
 █ MARCH 14TH, 2026                    ← # heading, rendered
@@ -207,7 +207,7 @@ heading at the top; a link to a heading in the same note jumps there.
 | Ctrl+T | Turn the line into a task (or add a new task below) |
 | Ctrl+L | Close the task (`[x]`), or reopen a closed one |
 | Ctrl+K | Fold / unfold what's under the cursor: a heading's section, a list item with sub-items, or a callout (`> [!type]-` starts folded). A folded item shows `▸ N lines` |
-| Ctrl+V | Paste from the clipboard (read with wl-paste, xclip, xsel or pbpaste); the terminal's own paste works too |
+| Ctrl+V | Paste from the clipboard (read with wl-paste, xclip, xsel, pbpaste or PowerShell on Windows); the terminal's own paste works too |
 | Alt+V | Cycle the modes: live preview → source mode (every line raw) → view mode (read-only, every line rendered) → live preview |
 | Tab / Shift+Tab (view mode) | Go to the next / previous link (Enter or a click follows it; Esc edits again) |
 | Ctrl+Enter / Alt+Enter | Follow the link under the cursor (`[[Note]]`, `[[Note#Heading]]`, `[text](file.md)`), relative to this file; asks to save unsaved changes first |
@@ -230,7 +230,8 @@ mdedit --version
 
 ## Settings
 
-Optional, in `~/.config/mdedit/config.toml` (or `$XDG_CONFIG_HOME/mdedit/`):
+Optional, in `~/.config/mdedit/config.toml` (or `$XDG_CONFIG_HOME/mdedit/`;
+`%APPDATA%\mdedit\` on Windows):
 
 ```toml
 # How done tasks look: "strike" (default) or "grey" (like Obsidian)
@@ -261,7 +262,7 @@ heading3_color = 214
 ```
 
 A bad line is reported in the status bar and ignored. Recently used emoji
-are kept in `~/.config/mdedit/recent_emoji`.
+are kept in `~/.config/mdedit/recent_emoji` (`%APPDATA%\mdedit\` on Windows).
 
 ## Using mdedit in another program
 

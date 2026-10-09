@@ -48,8 +48,13 @@ impl Capabilities {
         let var = |k: &str| env.get(k).map(String::as_str).filter(|v| !v.is_empty());
         let term = var("TERM").unwrap_or_default();
 
+        // Windows' terminals (Windows Terminal, the console) set no TERM
+        // and show every color.
+        let windows =
+            var("WT_SESSION").is_some() || (var("OS") == Some("Windows_NT") && term.is_empty());
         let colors = match var("COLORTERM") {
             Some("truecolor" | "24bit") => ColorDepth::TrueColor,
+            _ if windows => ColorDepth::TrueColor,
             _ if term.contains("256color") => ColorDepth::Indexed256,
             _ => ColorDepth::Basic16,
         };
@@ -215,6 +220,25 @@ mod tests {
                 .map(|(k, v)| (k.to_string(), v.to_string()))
                 .collect(),
         )
+    }
+
+    #[test]
+    fn windows_terminals_show_every_color() {
+        let env = |pairs: &[(&str, &str)]| -> HashMap<String, String> {
+            pairs
+                .iter()
+                .map(|(k, v)| (k.to_string(), v.to_string()))
+                .collect()
+        };
+        // Windows Terminal, and Windows' own console (no TERM there).
+        let wt = env(&[("WT_SESSION", "1d2c"), ("OS", "Windows_NT")]);
+        assert_eq!(Capabilities::detect(&wt).colors, ColorDepth::TrueColor);
+        let console = env(&[("OS", "Windows_NT")]);
+        assert_eq!(Capabilities::detect(&console).colors, ColorDepth::TrueColor);
+        // A Unix-like terminal on Windows (MSYS) still says what it is.
+        let msys = env(&[("OS", "Windows_NT"), ("TERM", "xterm")]);
+        assert_eq!(Capabilities::detect(&msys).colors, ColorDepth::Basic16);
+        assert_eq!(Capabilities::detect(&env(&[])).colors, ColorDepth::Basic16);
     }
 
     #[test]
