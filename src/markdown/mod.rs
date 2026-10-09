@@ -18,6 +18,7 @@ use ratatui::text::{Line, Span};
 use unicode_width::UnicodeWidthStr;
 
 pub(crate) mod inline;
+pub mod math;
 mod render;
 mod table;
 

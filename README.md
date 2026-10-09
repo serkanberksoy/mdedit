@@ -15,7 +15,7 @@ mdedit --help                 # all options, keys and settings
 Type to edit, move with the arrows. **Ctrl+S** saves, **Ctrl+X** exits,
 **Ctrl+F** searches, **Ctrl+Z** undoes.
 
-**Version:** 3.22.0 · **Stage:** Milestones 1 (core editor) and 2 (links) complete; next: M3 · [Version history](VERSION.md)
+**Version:** 3.23.0 · **Stage:** Milestones 1 (core editor) and 2 (links) complete; next: M3 · [Version history](VERSION.md)
 
 ```
 █ MARCH 14TH, 2026                    ← # heading, rendered
@@ -56,7 +56,7 @@ everything.
 
 ## Features
 
-Everything below is tested (83 of 92 tracked Obsidian features have
+Everything below is tested (85 of 92 tracked Obsidian features have
 approved tests; see [tests/TEST_MATRIX.md](tests/TEST_MATRIX.md)). Open
 [example_mds/feature_showcase.md](example_mds/feature_showcase.md) in
 mdedit to try each one.
@@ -282,7 +282,7 @@ See [documentation/embedding.md](documentation/embedding.md).
 |-----------|-------|--------|
 | M1 | Core editor: formatting, lists, blocks, editing, files | ✅ complete (1.0.0) |
 | M2 | Links | ✅ complete (1.8.1) |
-| M3 | Embeds, metadata, math, diagrams, footnotes, comments | In progress: images done |
+| M3 | Embeds, metadata, math, diagrams, footnotes, comments | In progress: images, math, footnotes, comments done |
 
 mdedit edits **one Markdown file at a time** and has no notion of a vault.
 Vault features (link autocomplete, vault-wide search, queries) belong to a

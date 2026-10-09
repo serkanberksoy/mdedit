@@ -12,7 +12,7 @@ Do not edit by hand. Regenerate with `UPDATE_SNAPSHOTS=1 cargo test --test featu
 | Dropped | 1 | 0 | 1 | 0 |
 | M1 | 54 | 54 | 0 | 0 |
 | M2 | 11 | 11 | 0 | 0 |
-| M3 | 25 | 17 | 8 | 0 |
+| M3 | 25 | 19 | 6 | 0 |
 | M5 | 2 | 1 | 1 | 0 |
 | Wrapper | 5 | 0 | 5 | 0 |
 
@@ -115,8 +115,8 @@ Do not edit by hand. Regenerate with `UPDATE_SNAPSHOTS=1 cargo test --test featu
 
 | ID | Feature | Milestone | Now | Fixture | Keys | Snapshot | Test |
 |----|---------|-----------|-----|---------|------|----------|------|
-| X-01 | Inline math | M3 | ⬜ | [X-01-inline-math.md](fixtures/07-math-diagrams-footnotes-comments-html/X-01-inline-math.md) | — | — | ⏸ pending |
-| X-02 | Block math | M3 | ⬜ | [X-02-block-math.md](fixtures/07-math-diagrams-footnotes-comments-html/X-02-block-math.md) | — | — | ⏸ pending |
+| X-01 | Inline math | M3 | ✅ | [X-01-inline-math.md](fixtures/07-math-diagrams-footnotes-comments-html/X-01-inline-math.md) | — | [expected](fixtures/07-math-diagrams-footnotes-comments-html/X-01-inline-math.expected) | ✅ checked |
+| X-02 | Block math | M3 | ✅ | [X-02-block-math.md](fixtures/07-math-diagrams-footnotes-comments-html/X-02-block-math.md) | — | [expected](fixtures/07-math-diagrams-footnotes-comments-html/X-02-block-math.expected) | ✅ checked |
 | X-03 | Mermaid diagrams | M3 | ⬜ | [X-03-mermaid.md](fixtures/07-math-diagrams-footnotes-comments-html/X-03-mermaid.md) | — | — | ⏸ pending |
 | X-04 | Footnote reference | M3 | ✅ | [X-04-footnote-reference.md](fixtures/07-math-diagrams-footnotes-comments-html/X-04-footnote-reference.md) | — | [expected](fixtures/07-math-diagrams-footnotes-comments-html/X-04-footnote-reference.expected) | ✅ checked |
 | X-05 | Footnote definition | M3 | ✅ | [X-05-footnote-definition.md](fixtures/07-math-diagrams-footnotes-comments-html/X-05-footnote-definition.md) | — | [expected](fixtures/07-math-diagrams-footnotes-comments-html/X-05-footnote-definition.expected) | ✅ checked |

@@ -19,7 +19,8 @@ ROOT = Path(__file__).resolve().parent.parent
 
 def sub(path, pattern, replacement):
     file = ROOT / path
-    text, n = re.subn(pattern, replacement, file.read_text(), count=1, flags=re.M)
+    # A function, so the replacement's backslashes stay as written.
+    text, n = re.subn(pattern, lambda _: replacement, file.read_text(), count=1, flags=re.M)
     if not n:
         sys.exit(f"{path}: no match for {pattern!r}")
     file.write_text(text)

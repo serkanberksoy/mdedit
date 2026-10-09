@@ -583,6 +583,7 @@ impl<'a> Doc<'a> {
                 render_frontmatter_line(line, owner).into()
             }
             LineContext::Comment => render_comment_line(line).into(),
+            LineContext::Math => crate::markdown::math::render_line(line).into(),
             LineContext::FenceOpen { lang } => render_fence_open(lang).into(),
             LineContext::FenceBody => match self.highlighted_line(i) {
                 Some((block, k)) if k < block.len() => render_code_pieces(&block[k]),

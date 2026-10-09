@@ -4,7 +4,7 @@ status: every implemented feature, in one note
 tags: [showcase, markdown]
 reviewed: true
 created: 2026-06-29
-version: 3.22.0
+version: 3.23.0
 ---
 # mdedit Feature Showcase
 
@@ -120,6 +120,19 @@ move the cursor into it to edit it.
 
 [^1]: The first footnote's text.
 [^source]: A named footnote.
+
+## Math
+
+LaTeX between dollar signs reads as Unicode: $e = mc^2$, $\alpha + \beta
+\leq \gamma$, $x_1, x_2 \in \mathbb{R}$, $\sqrt{2} \approx 1.41$. Prices
+like $5 and $10 stay as they are. A block, between `$$` lines (move the
+cursor into it to see the LaTeX):
+
+$$
+\sum_{i=1}^{n} i = \frac{n(n+1)}{2}
+$$
+
+$$ \forall x \in \mathbb{R}: x^2 \geq 0 $$
 
 ## Links and tags
 

@@ -126,8 +126,8 @@ each milestone contains and the order of work.
 
 | ID | Feature | Syntax | Now | Effort | Milestone | Notes |
 |----|---------|--------|-----|--------|-----------|-------|
-| X-01 | Inline math | `$e = mc^2$` | ⬜ | M | M3 | Terminal: convert LaTeX to Unicode (`e = mc²`) |
-| X-02 | Block math | `$$ … $$` | ⬜ | M | M3 | Unicode approximation, or show as code |
+| X-01 | Inline math | `$e = mc^2$` | ✅ | M | M3 | Terminal: convert LaTeX to Unicode (`e = mc²`) |
+| X-02 | Block math | `$$ … $$` | ✅ | M | M3 | Unicode approximation, or show as code |
 | X-03 | Mermaid diagrams | ```` ```mermaid ```` | ⬜ | L | M3 | Terminal: show as code, or ASCII rendering |
 | X-04 | Footnote reference | `text[^1]` | ✅ | S | M3 | 3.5.0: `[label]` in the footnote color (no superscript digits: they have no ASCII fallback) |
 | X-05 | Footnote definition | `[^1]: note` | ✅ | M | M3 | 3.5.0: `[label]` then its text; not a link definition |

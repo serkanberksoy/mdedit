@@ -270,6 +270,20 @@ fn parse_inline(
             continue;
         }
 
+        // Inline math (X-01): `$e = mc^2$` as `e = mc²`.
+        if rest.starts_with('$')
+            && prev != Some('$')
+            && let Some(n) = super::math::inline_len(rest)
+        {
+            flush(&mut plain, out);
+            out.push(Span::styled(
+                super::math::to_unicode(&rest[1..n - 1]),
+                base.patch(super::math::STYLE),
+            ));
+            i += n;
+            continue;
+        }
+
         // Backslash escape: `\*` is a literal `*` (ASCII punctuation only).
         if let Some(c) = rest
             .strip_prefix('\\')

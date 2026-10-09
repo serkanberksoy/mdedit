@@ -1,6 +1,6 @@
 # Version history
 
-Current version: **3.22.0**
+Current version: **3.23.0**
 
 ## Versioning rules
 
@@ -28,6 +28,17 @@ Entry format: `## X.Y.Z (YYYY-MM-DD)`, followed by *Added / Changed / Fixed*
 sections that name feature IDs where there are any.
 
 ---
+
+## 3.23.0 (2026-10-08)
+
+### Added
+- **Math as Unicode (X-01, X-02):** inline `$…$` (read as Obsidian
+  reads it: `$5 and $10` isn't math) and `$$ … $$` blocks show their
+  LaTeX as Unicode: Greek letters, operators, relations and arrows,
+  superscripts and subscripts where Unicode has them (`mc²`, `∑ᵢ₌₁ⁿ`),
+  `\frac`, `\sqrt`, `\mathbb`, `\text`; unknown commands stay as written.
+  A block shows its LaTeX while the cursor is in it; an unclosed `$$`
+  isn't math. `markdown::math::to_unicode` for hosts.
 
 ## 3.22.0 (2026-10-08)
 

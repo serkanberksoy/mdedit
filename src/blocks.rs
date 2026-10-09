@@ -52,6 +52,8 @@ pub enum LineContext {
     LinkDefinition,
     /// A line of a `%%` … `%%` comment block (X-08), its `%%` lines too.
     Comment,
+    /// A line of a `$$` … `$$` math block (X-02), its `$$` lines too.
+    Math,
     /// A row of table `table` (index into `Structure::tables`; B-11).
     TableRow {
         table: usize,
@@ -296,6 +298,27 @@ pub fn analyze(lines: &[String]) -> Structure {
             end_code(&mut s, &mut code_block);
             item = None;
             i += 1;
+            continue;
+        }
+        // A math block (X-02): from a `$$` line to one ending in `$$`, or
+        // one line `$$ … $$`.
+        // Not closed: not math.
+        let trimmed = line.trim();
+        let math_end = if !trimmed.starts_with("$$") {
+            None
+        } else if trimmed.len() > 4 && trimmed.ends_with("$$") {
+            Some(i)
+        } else {
+            (i + 1..lines.len()).find(|&k| lines[k].trim_end().ends_with("$$"))
+        };
+        if let Some(end) = math_end {
+            for k in i..=end {
+                s.context[k] = LineContext::Math;
+            }
+            s.reveal_groups.push((i, end));
+            end_code(&mut s, &mut code_block);
+            item = None;
+            i = end + 1;
             continue;
         }
         if let Some((ch, len, info)) = fence_open(line) {
@@ -587,6 +610,18 @@ mod tests {
 
     fn open(lang: &str) -> LineContext {
         FenceOpen { lang: lang.into() }
+    }
+
+    #[test]
+    fn math_blocks_need_their_closing() {
+        assert_eq!(ctx("$$\nx^2\n$$\ny"), [Math, Math, Math, Normal]);
+        assert_eq!(ctx("$$ x $$\ny"), [Math, Normal]);
+        assert_eq!(
+            ctx("$$100 bills\nmore text\nend"),
+            [Normal, Normal, Normal],
+            "not closed: not math"
+        );
+        assert_eq!(ctx("```\n$$\n```"), [open(""), FenceBody, FenceClose]);
     }
 
     #[test]

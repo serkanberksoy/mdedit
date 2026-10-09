@@ -169,8 +169,8 @@ other notes and files, note properties, and technical notation.
 - **Metadata (P-01 … P-06):** ✅ P-05 inline tags · 🟡 P-01 frontmatter · ⬜
   property types, special properties, collapsing properties, tags in
   frontmatter. Related: R-05, R-12.
-- **Math, diagrams, footnotes, comments, HTML (X-01 … X-10):** LaTeX shown
-  as Unicode, Mermaid, footnotes, `%%comments%%`, inline/block HTML.
+- **Math, diagrams, footnotes, comments, HTML (X-01 … X-10):** ✅ LaTeX shown
+  as Unicode (X-01, X-02, 3.23.0: `markdown::math`), Mermaid, footnotes, `%%comments%%`, inline/block HTML.
 - ✅ **Task types (L-09, L-10):** done through L-05's glyphs: in progress
   `- [/]` ◐, forwarded `- [>]` ➜ (the Obsidian convention), cancelled /
   dropped `- [-]` ☒, important / priority `- [!]` ⚑. A task state is a
